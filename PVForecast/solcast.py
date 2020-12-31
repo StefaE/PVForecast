@@ -1,10 +1,6 @@
 from pysolcast.rooftop import RooftopSite
 from datetime          import datetime, timezone
 from suntime           import Sun, SunTimeException
-try:
-    import nonesense
-except ImportError:
-    print("nonesense not installed")
 
 import pandas as pd
 import numpy  as np
