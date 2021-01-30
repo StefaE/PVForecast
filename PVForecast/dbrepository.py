@@ -3,7 +3,7 @@ from datetime  import datetime, timezone
 from .forecast import Forecast
 
 class DBRepository:
-    """Class for storing PVForecast related data into sqlite database"""
+    """Class for storing PVForecast related data into sqlite database""" 
 
     def __init__(self, config):
         """Initialize DBRepository
