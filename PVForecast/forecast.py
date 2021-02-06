@@ -1,5 +1,5 @@
 class Forecast:
-    """Abstract class of forecast data structures""" 
+    """Abstract class of forecast data structures"""
 
     def __init__(self):
         self.DataTable    = None                                                         # Pandas dataframe with most recent read weather data

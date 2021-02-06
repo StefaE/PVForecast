@@ -7,10 +7,10 @@ from PVForecast.solcast import SolCast
 
 if __name__ == "__main__":
     cfgParser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    cfgParser.add_argument('-c', '--cfg', help="Specify config file (default: ./config.ini)", metavar="FILE")
+    cfgParser.add_argument('-c', '--cfg', help="Specify config file (default: ./solcast_light_config.ini)", metavar="FILE")
     args = cfgParser.parse_args()
     if args.cfg: cfgFile = args.cfg
-    else:        cfgFile = 'config.ini'
+    else:        cfgFile = 'solcast_light_config.ini'
 
     try:
         config = configparser.ConfigParser(inline_comment_prefixes='#', empty_lines_in_values=False)

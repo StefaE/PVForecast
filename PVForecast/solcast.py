@@ -24,7 +24,7 @@ class SolCast(Forecast):
         self._site        = RooftopSite(api_key, resource_id)
         self._interval    = self.config['SolCast'].getint('interval', 60) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
         self._db          = None                                                         # DBRepository object once DB is opened
-        self._storeDB     = self.config['SolCast'].getboolean('storeDB')                 # ... store to DB
+        self._storeDB     = self.config['SolCast'].getboolean('storeDB', 0)              # ... store to DB
         self._storeInflux = self.config['SolCast'].getboolean('storeInflux')             # ... store to Influx (one of the two must be true to make sense to get data from solcast)
         self._force       = self.config['SolCast'].getboolean('force', False)            # force download - note that we are restricted in number of downloads/day
         if self._force:
@@ -39,7 +39,7 @@ class SolCast(Forecast):
         now_utc        = datetime.now(timezone.utc)
         mySun          = sun(location.observer, date=now_utc)
         retVal         = False
-        if self._force or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']): # storeDB enabled, SolCast enabled, daylight
+        if self._force or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
             if self._storeDB or self._storeInflux:
                 if self._storeDB:
                     self._db        = DBRepository(self.config)
@@ -49,7 +49,7 @@ class SolCast(Forecast):
                     self._influx    = InfluxRepo(self.config)
                     self.last_issue = self._influx.getLastIssueTime(self.SQLTable)
                 delta_t          = round((now_utc - self.last_issue).total_seconds()/60)
-                if (delta_t > self._interval):                                      # download SolCast again
+                if (delta_t > self._interval):                                           # download SolCast again
                     retVal = True
                     print("Message - downloading SolCast data at (UTC): " + str(now_utc))
             else:
@@ -79,7 +79,7 @@ class SolCast(Forecast):
             if self._storeDB: self._db.loadData(self)                                    # store data in repository, db was opened in self._doDownload()
             if self.config['SolCast'].getboolean('storeInflux'):
                 self._influx.loadData(self)                                              # store data to Influx, client was opened in self._doDownload()
-                if self.config['SolCast'].getboolean('post'):
+                if self.config['SolCast'].getboolean('post', 0):
                     self.postDict = self._influx.getPostData(self)
                     if self.postDict is not None:
                         if self._storeDB:

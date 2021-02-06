@@ -46,7 +46,7 @@ class PVModel(Forecast):
                                             'temp_dew'   : 'dew_point',
                                             'clouds'     : 'clouds' }}
             self._weatherFields['dwd_s'] = self._weatherFields['dwd']
-            self._allow_erbs_kt     = self.config[self._cfg].getboolean('allow_erbs_kt', False)   # needs modification of pvlib.irradiance.erbs()
+            self._allow_experimental     = self.config[self._cfg].getboolean('experimental', False)   # needs modification of pvlib.irradiance.erbs()
 
             self._location = Location(latitude  = self.config[self._cfg].getfloat('Latitude'),
                                       longitude = self.config[self._cfg].getfloat('Longitude'), 
@@ -265,7 +265,7 @@ class PVModel(Forecast):
             dfList.append(self.runModel(weather, 'dirint', modelLst))
             dfList.append(self.runModel(weather, 'dirindex', modelLst))
             dfList.append(self.runModel(weather, 'erbs', modelLst))
-            if 'RRad1' in weather.DataTable and self._allow_erbs_kt:
+            if 'RRad1' in weather.DataTable and self._allow_experimental:
                 dfList.append(self.runModel(weather, 'erbs_kt', modelLst))
         dfList.append(self.runModel(weather, 'clearsky_scaling', modelLst))              # ---- cloud based models
         if self._pvversion >= '0.8.1':                                                   # deprecated model 'liujordan' not implemented

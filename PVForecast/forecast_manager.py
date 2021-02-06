@@ -42,17 +42,17 @@ class ForecastManager:
         else:
             myWeather.readKML(file)
         if myWeather.parseKML():                                                         # successful parsing done ...
-            if (self.config['DWD'].getboolean('storeCSV')):                              # store weather to .csv
+            if (self.config['DWD'].getboolean('storeCSV', 0)):                           # store weather to .csv
                 myWeather.writeCSV()
 
-            #---------------------------------------------------------------------------- PV Forecast handling
+            #--------------------------------------------------------------------------- PV Forecast handling
             myPV  = PVModel(self.config)
             model = self.config['DWD'].get('Irradiance')
             myPV.run_allModels(myWeather, model)
-            if (self.config['PVSystem'].getboolean('storeCSV')):                         # store PV simulations to .csv
+            if (self.config['PVSystem'].getboolean('storeCSV', 0)):                      # store PV simulations to .csv
                 myPV.writeCSV(myWeather.kmlName)
 
-            #---------------------------------------------------------------------------- SQLite storage
+            #--------------------------------------------------------------------------- SQLite storage
             if (self.config['DWD'].getboolean('storeDB')):
                 myDB = DBRepository(self.config)
                 myDB.loadData(myWeather)

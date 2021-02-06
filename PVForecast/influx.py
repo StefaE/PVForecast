@@ -68,7 +68,7 @@ class InfluxRepo:
                     period_end = period_end.strftime('%Y-%m-%dT%H:%M:%SZ')               # ... and convert back to a string
                     postDict.append( { 'period_end'  : period_end,
                                        'period'      : 'PT5M',
-                                       'total_power' : row['total_power']/1000 })
+                                       'total_power' : row['total_power']/1000 } )
             if not hasData:
                 print("Warning --- no generated power data found to post... Wrong 'power_field' definition?")
             if len(postDict) > 0: postDict = { "measurements": postDict }
