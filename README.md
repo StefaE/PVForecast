@@ -285,7 +285,7 @@ It is assumed that
 This application is designed to run seamlessly alongside [solaranzeige](https://solaranzeige.de). Hence, if installed on the same host, the `[Influx]` configuration section discussed in previous section may very well look like this:
 ```
 [Influx]
-    host              = localhost
+    # host            = localhost             # default: localhost
     database          = solaranzeige   
     power_field       = PV.Gesamtleistung
 ```
@@ -311,7 +311,7 @@ If errors are seen, checkout [pandas installation instructions](https://pandas.p
 sudo apt install python3-pandas
 ```
 
-In case [Influx Storage](#influx-storage) is desired, installation instructions can be found [here](https://simonhearne.com/2020/pi-influx-grafana/)
+In case [Influx Storage](#influx-storage) is desired, but `Influx` is not yet available, installation instructions can be found [here](https://simonhearne.com/2020/pi-influx-grafana/)
 
 ### Minimal Requirements
 ```
