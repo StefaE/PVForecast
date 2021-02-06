@@ -6,7 +6,7 @@ This project supports an extensive set of production forecasts for PV rooftop in
 
 The project has been developped on Python3 and runs on Raspberries and integrates with [solaranzeige](https://solaranzeige.de) (see [Solaranzeige Integration](#solaranzeige-integration))
 
-Generally, functionality is configured through a configuration file (default: `.\config.ini`, a different location can be provided with `-c` command line option)
+Generally, functionality is configured through a configuration file (default: `.\config.ini`, `.\solcast_light_config.ini`, a different location can be provided with `-c` command line option)
 
 Two main scripts are provided:
 Script | Description
@@ -15,7 +15,7 @@ Script | Description
 `SolCastLight.py` | can only use [Solcast](https://solcast.com/) forecasts but is significantly easier to install and configure
 
 ## SolCastLight: Minimalistic Installation
-The following description of the full script is relatively complex. Hence, this section describes the minimalisic needs to only run SolCast forecasting:
+The following description of the full script is relatively complex. Hence, this section describes the **minimalisic** needs to only run SolCast forecasting:
 1. prepare Python to run the script:
    1. [Basic Installation](#the-basics)
    2. [add some Python modules](#minimal-requirements)
@@ -26,15 +26,17 @@ The following description of the full script is relatively complex. Hence, this 
 3. if integration with [Solaranzeige](https://solaranzeige.de) is desired, read [this](#solaranzeige-integration)
 4. [Install and run script](#running-the-script)
 
+A couple of more options can be configured, but are left out of this brief description. They would become obvious when reading the full text below.
+
 -------------
-The reminder of this `ReadMe` file is meant to describe the full script configuration
+The reminder of this `ReadMe` file is meant to describe the full script configuration. 
 
 ## Main Functionality and Configuration
 `.\config.ini` is a configuration file parsed with python's [configparser](https://docs.python.org/3/library/configparser.html). Most importantly:
 * items can be promoted to the `[DEFAULT]` section if same `key = value` pair is used in multiple sections
 * inline comments are configured to start with `#`
 * multi-line values are not allowed
-* outcommented `key = value` pairs show the respective default options, which could be changed as needed
+* out-commented `key = value` pairs show the respective default options, which could be changed as needed
 
 The `config.ini` file provided with the distribution contains a few site specific values, which cannot be pre-configured. The are shown as `<xx>`. This file should be read alongside the below text for best understanding.
 
@@ -235,7 +237,7 @@ Note that if the configuration file is changed on a running system, more or less
 #### Influx Storage
 ```
 [Influx]
-    host              = <your_hostname>         # can be localhost
+    host              = <your_hostname>         # default: localhost
     # port            = 8086
     database          = <your_influx_db_name>   
     power_field       = PV.Gesamtleistung

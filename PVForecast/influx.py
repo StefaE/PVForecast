@@ -11,7 +11,7 @@ from .forecast import Forecast
 class InfluxRepo:
     def __init__(self, config):
         self.config    = config
-        self._host     = self.config['Influx'].get('host')
+        self._host     = self.config['Influx'].get('host', 'localhost')
         self._port     = self.config['Influx'].getint('port', 8086)
         self._database = self.config['Influx'].get('database')
 
@@ -55,7 +55,8 @@ class InfluxRepo:
 
             meas, field = self.config['Influx'].get('power_field').split('.')
 
-            client    = InfluxDBClient(host=self._host, port=self._port, database=self._database)
+            # client    = InfluxDBClient(host=self._host, port=self._port, database=self._database)
+            client      = InfluxDBClient(host='solaranzeige', port=self._port, database='solaranzeige')           # <===================================
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []
