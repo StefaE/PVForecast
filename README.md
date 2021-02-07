@@ -124,7 +124,7 @@ Model | Input parameter | Applicable to | Comment
 [disc](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.disc.html)  | Rad1h (GHI)     | MOSMIX | not all stations have Rad1h, probably the 'standard' model
 [dirint](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.dirint.html) | Rad1h (GHI) | MOSMIX | not all stations have Rad1h
 [dirindex](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.dirindex.html) |Rad1h (GHI) | MOSMIX | not all stations have Rad1h, some numerical instabilities at very low values of GHI
-[erbs](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.erbs.html) | Rad1h (GHI) | MOSMIX | not all stations have Rad1h (*)
+[erbs](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.erbs.html) | Rad1h (GHI) | MOSMIX | not all stations have Rad1h
 [campbell_norman](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.campbell_norman.html) | cloud coverage | OWM, MOSMIX | cloud coverage is provided as parameter `clouds` and by MOSMIX parameter `N`
 [clearsky_scaling](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.forecast.ForecastModel.cloud_cover_to_irradiance_clearsky_scaling.html?highlight=clearsky_scaling) | cloud coverage | OWM, MOSMIX | cloud coverage is provided as parameter `clouds` and by MOSMIX parameter `N`
 [clearsky](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.location.Location.get_clearsky.html?highlight=get_clearsky#pvlib.location.Location.get_clearsky) | NA | OWM, MOSMIX | clear sky estimation of PV output power. Secondary weather parameters are considered. The default model used is `simplified_solis` (see [below](#convert-irradiation-data-to-pv-output-power)).
@@ -246,7 +246,7 @@ Note that if the configuration file is changed on a running system, more or less
 This will create the following _measurements_ (akin tables) in the defined Influx database:
 Table | Content
 ------|--------
-solcast | power estimates: `pv_stimate`, `pv_estimate10`, `pv_estimate90`
+solcast | power estimates: `pv_estimate`, `pv_estimate10`, `pv_estimate90`
 owm     | DC power estimates from OpenWeatherMap, named `dc_<model>`
 pvsystem | DC power estimates from MOSMIX_L, named `dc_<model>`
 pvsystem_s | DC power estimates from MOSMIX_S, named `dc_<model>`
@@ -351,6 +351,7 @@ sudo pip3 install pvlib
 Finally, we might need (if not already installed by default) `elementpath` to handle `MOSMIX` .xml files:
 ```
 sudo pip3 install elementpath
+sudo pip3 install beautifulsoup4
 ```
 
 ### Optional
