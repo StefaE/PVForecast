@@ -5,7 +5,7 @@ import elementpath
 import gzip
 from zipfile import ZipFile
 from io      import BytesIO
-from bs4 import BeautifulSoup
+from bs4     import BeautifulSoup
 
 import pandas as pd
 import numpy  as np
@@ -77,16 +77,17 @@ class DWDForecast(Forecast):
             files    = [url + '/' + node.get('href') for node in soup.find_all('a') if node.get('href').endswith('kmz')]
             if (len(files) < 2):
                 raise Exception("ERROR --- Expected to find at least two file links at '" + url + "'")
-            if (len(files) >= 3 and not self.config['DWD'].getboolean('keepKMZ_S', False)):
-                myRemote = files[len(files)-3]
-                myLocal  = path + os.path.basename(myRemote)                             # previously downloaded 
-                if (os.path.isfile(myLocal)):
-                    os.remove(myLocal)                                                   # delete if existent
             myRemote = files[len(files)-2]                                               # file to fetch from remote (last but one, as last is '_LATEST')
             myLocal  = path + os.path.basename(myRemote)                                 # where to store downloaded file
             if (os.path.isfile(myLocal)):
                 print('Message - File ' + myLocal + ' already exists, not re-downloaded')
             else:
+                if not self.config['DWD'].getboolean('keepKMZ_S', False):                # delete local MOSMIX_S_* files
+                    for f in os.listdir(path):
+                        if re.search(r'^MOSMIX_S_', f):
+                            f_path = path + os.path.basename(f)
+                            if os.path.isfile(f_path):
+                                os.remove(f_path)
                 kmlName = os.path.basename(myLocal)
                 kmlName = re.sub(r'\.kmz', '.kml', kmlName)
                 req     = requests.get(myRemote)
