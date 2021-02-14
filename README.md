@@ -154,7 +154,7 @@ Both approaches are supported and selected based on `Model`
     # clearsky_model   = simplified_solis
     
     # --------------------------- physical definition of PV System, using CEC database
-    # based on .csv files at ~/.local/lib/python3.8/site-packages/pvlib/data, special characters to be replaced by '_'
+    # based on .csv files at .../lib/python3.8/site-packages/pvlib/data, special characters to be replaced by '_'
     ModuleName        = LG_Electronics_Inc__LG325N1W_V5
     InverterName      = SMA_America__SB10000TL_US__240V_
     NumStrings        =   2       # number of strings 
@@ -166,6 +166,7 @@ Both approaches are supported and selected based on `Model`
     SystemPower       =  9750     # system power [Wp]
     TemperatureCoeff  = -0.0036   # temperature coefficient (efficiency loss per 1C)
 ```
+The .csv are stored whereever pvlib installs on your system. A good place to start searching is in `/usr/local/lib/python3.7/dist-packages/pvlib/data` or `~/.local/lib/python3.8/site-packages/pvlib/data`
 
 If the (default) `CEC` approach is used, the selected model should at a minimum match the nameplate power of the installed panels (eg. 325Wp). The selected inverter is uncritical as long as the nameplate power is same or higher as installed inverter (eg. 10kW) - the modeling of inverters is relatively poor in pvlib, considering only a _NominalEfficency_.
 
@@ -256,6 +257,16 @@ where `<model>` refers to one of the [irradiance](#convert-weather-data-to-irrad
 
 `power_field` will be discussed in [Solcast Tuning](#solcast-tuning) below
 
+The `database` must pre-exist in Influx. If it does not, the following manual operations can create it:
+```
+~ $ influx
+> show databases
+> create database <your_influx_db_name>
+> show databases
+> quit
+~ $
+```
+
 ### .csv File Storage
 Config sections `[DWD]` and `[PVSystem]` support an option `storeCSV = 1` to store output in .csv files at `storePath`.
 
@@ -302,6 +313,8 @@ It is assumed that Python 3.x is available and pandas, numpy installed. This can
 ~ $ python3
 >>> import pandas as pd
 >>> import numpy as np
+>>> pd.__version__
+>>> np.__version__
 >>> quit()
 ~ $
 ```
@@ -310,6 +323,8 @@ If errors are seen, checkout [pandas installation instructions](https://pandas.p
 ```
 sudo apt install python3-pandas
 ```
+
+pandas versions from 1.1.2 and numpy  1.19.2 are known to work. Earlier versions might need an upgrade. Try the script and see what happens before you upgrade though. Some googling might be needed as on Raspberries the upgrade path is not always as linear.
 
 In case [Influx Storage](#influx-storage) is desired, but `Influx` is not yet available, installation instructions can be found [here](https://simonhearne.com/2020/pi-influx-grafana/)
 
