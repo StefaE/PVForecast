@@ -18,7 +18,10 @@ class InfluxRepo:
     def loadData(self, data: Forecast):
         if (data.InfluxFields):
             client   = DataFrameClient(host=self._host, port=self._port, database=self._database)
-            client.write_points(data.DataTable[data.InfluxFields]+0.0, data.SQLTable)  # +0.0 to force float
+            df       = data.DataTable[data.InfluxFields].copy()
+            for field in data.InfluxFields:
+                df.loc[:,field] = df[field].astype(float)
+            client.write_points(df, data.SQLTable)
 
             issueTime = datetime.fromisoformat(data.IssueTime)
             issueTime = int(time.mktime(issueTime.timetuple()))

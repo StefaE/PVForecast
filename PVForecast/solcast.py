@@ -19,7 +19,7 @@ class SolCast(Forecast):
 
         super().__init__()
         self.config       = config
-        resource_id     = self.config['SolCast'].get('resource_id')
+        resource_id       = self.config['SolCast'].get('resource_id')
         api_key           = self.config['SolCast'].get('api_key')
         self._site        = RooftopSite(api_key, resource_id)
         self._interval    = self.config['SolCast'].getint('interval', 60) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
@@ -49,7 +49,7 @@ class SolCast(Forecast):
                     self._influx    = InfluxRepo(self.config)
                     self.last_issue = self._influx.getLastIssueTime(self.SQLTable)
                 delta_t          = round((now_utc - self.last_issue).total_seconds()/60)
-                if (delta_t > self._interval):                                           # download SolCast again
+                if self._force or delta_t > self._interval:                              # download SolCast again
                     retVal = True
                     print("Message - downloading SolCast data at (UTC): " + str(now_utc))
             else:
@@ -58,14 +58,18 @@ class SolCast(Forecast):
 
     def getSolCast(self):
         if (self._doDownload()):
-            forecasts = self._site.get_forecasts_parsed()
+            try:
+                forecasts = self._site.get_forecasts_parsed()
+            except Exception as e:
+                print ("getSolCast: " + str(e))
+                sys.exit(1)
 
             # --------- debugging begin
             #myFile    = open('./temp/forecasts_01', 'wb')                               # store forecast to file for later debugging runs 
             #pickle.dump(forecasts, myFile)
             #myFile.close()
             #
-            #myFile    = open('./temp/forecasts_01', 'rb')                           # load dummy solcast forecast for debugging
+            #myFile    = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
             #forecasts = pickle.load(myFile)
             #myFile.close()
             # --------- debugging end
