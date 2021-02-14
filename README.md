@@ -166,7 +166,7 @@ Both approaches are supported and selected based on `Model`
     SystemPower       =  9750     # system power [Wp]
     TemperatureCoeff  = -0.0036   # temperature coefficient (efficiency loss per 1C)
 ```
-The .csv are stored whereever pvlib installs on your system. A good place to start searching is in `/usr/local/lib/python3.7/dist-packages/pvlib/data` or `~/.local/lib/python3.8/site-packages/pvlib/data`
+The .csv are stored whereever pvlib installs on your system. A good place to start searching is in `/usr/local/lib/python3.7/dist-packages/pvlib/data` or `~/.local/lib/python3.8/site-packages/pvlib/data`. In that directory should be two files `sam-library-cec-inverters-2019-03-05.csv` and `sam-library-cec-modules-2019-03-05.csv` for inverters and modules respectively.
 
 If the (default) `CEC` approach is used, the selected model should at a minimum match the nameplate power of the installed panels (eg. 325Wp). The selected inverter is uncritical as long as the nameplate power is same or higher as installed inverter (eg. 10kW) - the modeling of inverters is relatively poor in pvlib, considering only a _NominalEfficency_.
 
