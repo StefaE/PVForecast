@@ -189,7 +189,7 @@ class PVModel(Forecast):
                 dhi  = np.array(erbs['dhi'])
                 kt   = np.array(erbs['kt'])
             elif (model == 'clearsky'):
-                clearsky_model  = self.config[self._cfg].getfloat('clearsky_model', 'simplified_solis')
+                clearsky_model  = self.config[self._cfg].get('clearsky_model', 'simplified_solis')
                 self.irradiance = self._location.get_clearsky(weatherData.index,         # calculate clearsky ghi, dni, dhi for clearsky
                                                               model=clearsky_model)
             elif (model == 'clearsky_scaling' or model == 'campbell_norman'):
