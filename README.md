@@ -29,6 +29,37 @@ The following description of the full script is relatively complex. Hence, this 
 A couple of more options can be configured, but are left out of this brief description. They would become obvious when reading the full text below.
 
 -------------
+## Table of Content
+  * [Introduction](#introduction)
+  * [SolCastLight: Minimalistic Installation](#solcastlight-minimalistic-installation)
+  * [Main Functionality and Configuration](#main-functionality-and-configuration)
+    + [Forecast Sources](#forecast-sources)
+    + [**Solcast** Configuration](#solcast-configuration)
+    + [**OWM** configuration](#owm-configuration)
+    + [**MOSMIX** configuration](#mosmix-configuration)
+    + [Forecast models](#forecast-models)
+      - [Convert Weather Data to Irradation Data](#convert-weather-data-to-irradation-data)
+      - [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
+    + [Data Storage](#data-storage)
+      - [SQLite Storage](#sqlite-storage)
+      - [Influx Storage](#influx-storage)
+    + [.csv File Storage](#csv-file-storage)
+    + [Solcast Tuning](#solcast-tuning)
+    + [Solaranzeige Integration](#solaranzeige-integration)
+  * [Installation](#installation)
+    + [The Basics](#the-basics)
+    + [Minimal Requirements](#minimal-requirements)
+    + [Full Installation](#full-installation)
+    + [Optional](#optional)
+  * [Running the Script](#running-the-script)
+  * [To Do](#to-do)
+  * [Disclaimer](#disclaimer)
+  * [License](#license)
+
+Table of contents generated with [markdown-toc](http://ecotrust-canada.github.io/markdown-toc/)
+
+-------------
+
 The reminder of this `ReadMe` file is meant to describe the full script configuration. 
 
 ## Main Functionality and Configuration

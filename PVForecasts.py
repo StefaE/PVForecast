@@ -16,8 +16,8 @@ if __name__ == "__main__":
     if args.cfg: cfgFile = args.cfg
     else:        cfgFile = 'config.ini'
     print("------------------------- Start (" + cfgFile + ")")
-    measure_temp('start')                          # monitor raspi core temperature before
+    #measure_temp('start')                          # monitor raspi core temperature before
     myForecastManager = ForecastManager(cfgFile)
     myForecastManager.runForecasts()
-    measure_temp('end')                            # and after processing
+    #measure_temp('end')                            # and after processing
     print("------------------------- End: " + datetime.now().strftime("%Y-%m-%d, %H:%M:%S"))
