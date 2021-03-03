@@ -20,8 +20,11 @@ class SolCast(Forecast):
         super().__init__()
         self.config       = config
         resource_id       = self.config['SolCast'].get('resource_id')
+        resource_id_2     = self.config['SolCast'].get('resource_id_2', None)            # 2nd resource_id for split array installations
         api_key           = self.config['SolCast'].get('api_key')
         self._site        = RooftopSite(api_key, resource_id)
+        if resource_id_2 is not None: self._site_2 = RooftopSite(api_key, resource_id_2)
+        else:                         self._site_2 = None
         self._interval    = self.config['SolCast'].getint('interval', 60) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
         self._db          = None                                                         # DBRepository object once DB is opened
         self._storeDB     = self.config['SolCast'].getboolean('storeDB', 0)              # ... store to DB
@@ -59,7 +62,9 @@ class SolCast(Forecast):
     def getSolCast(self):
         if (self._doDownload()):
             try:
-                forecasts = self._site.get_forecasts_parsed()
+                forecasts_1 = self._site.get_forecasts_parsed()
+                if self._site_2 is not None: 
+                    forecasts_2 = self._site_2.get_forecasts_parsed()
             except Exception as e:
                 print ("getSolCast: " + str(e))
                 sys.exit(1)
@@ -69,17 +74,30 @@ class SolCast(Forecast):
             #pickle.dump(forecasts, myFile)
             #myFile.close()
             #
-            #myFile    = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
-            #forecasts = pickle.load(myFile)
-            #myFile.close()
+            # myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
+            # forecasts_1 = pickle.load(myFile)
+            # forecasts_2 = forecasts_1
+            # myFile.close()
             # --------- debugging end
 
-            df                = pd.DataFrame(forecasts['forecasts'])
-            df                = df.set_index('period_end')
-            df.index.name     = 'PeriodEnd'
-            self.DataTable    = df.drop('period', axis=1)*1000                           # convert kWh to Wh
-            self.IssueTime    = str(self.DataTable.index[0] - df['period'][0])
-            self.InfluxFields = self.get_ParaNames()
+            df                  = pd.DataFrame(forecasts_1['forecasts'])
+            df                  = df.set_index('period_end')
+            period              = df['period'][0]
+            df.drop('period', axis=1, inplace=True)
+            if self._site_2 is not None:
+                cols            = list(df)
+                df.columns      = [str(c) + '_1' for c in cols]
+                df_2            = pd.DataFrame(forecasts_2['forecasts'])
+                df_2            = df_2.set_index('period_end')
+                df_2.drop('period', axis=1, inplace=True)
+                df_2.columns    = [str(c) + '_2' for c in cols]
+                df              = pd.merge(df, df_2, on='period_end', how='inner')
+                for c in cols:
+                    df[c]       = df[c + '_1'] + df[c + '_2']
+            df.index.name       = 'PeriodEnd'
+            self.DataTable      = df*1000                                                # convert kWh to Wh
+            self.IssueTime      = str(self.DataTable.index[0] - period)
+            self.InfluxFields   = self.get_ParaNames()
             if self._storeDB: self._db.loadData(self)                                    # store data in repository, db was opened in self._doDownload()
             if self.config['SolCast'].getboolean('storeInflux'):
                 self._influx.loadData(self)                                              # store data to Influx, client was opened in self._doDownload()

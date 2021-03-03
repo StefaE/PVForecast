@@ -22,7 +22,7 @@ The following description of the full script is relatively complex. Hence, this 
 2. update `solcast_light_config.ini` to your SolCast registration
    1. [SolCast Configuration](#solcast-configuration)
    2. [Influx Storage Configuration](#influx-storage)
-   3. optional but recommended: [SolCast Tuning Configuration](#solcast-tuning)
+   3. (depricated): [SolCast Tuning Configuration](#solcast-tuning)
 3. if integration with [Solaranzeige](https://solaranzeige.de) is desired, read [this](#solaranzeige-integration)
 4. [Install and run script](#running-the-script)
 
@@ -96,8 +96,9 @@ Depending on the data source, various forecast algorithms are available. The con
 ```
 [SolCast]
     resource_id       = <resource_id_from_solcast.com>
+    # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    post              = 1         # enable posting and tuning
+    # post            = 0         # enable posting and tuning (depricated)
     # interval        = 60        # interval at which SolCast is read (during daylight only)
     Latitude          = 51.8
     Longitude         =  6.1
@@ -109,7 +110,7 @@ To stay within the limits of 20 API calls/day, the API is only called with an `i
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
-Solcast also allows to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. This can be enabled with `post = 1`. See [Solcast Tuning](#solcast-tuning) for how performance data can be provided.
+[Since tuning was depricated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support split-array setups. In such a situation, a `resource_id` and `resource_id_2` can be provided. Both will be queried at the same times. Individual and total forecast results will be stored in the database(s)
 
 ### **OWM** configuration
 ```
@@ -302,7 +303,9 @@ The `database` must pre-exist in Influx. If it does not, the following manual op
 Config sections `[DWD]` and `[PVSystem]` support an option `storeCSV = 1` to store output in .csv files at `storePath`.
 
 ### Solcast Tuning
-As mentioned [above](#solcast-configuration), Solcast allows to post PV performance data. This is enabled with
+**Depricated by SolCast**
+Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
+
 ```
 [SolCast]
     post = 1
@@ -321,7 +324,6 @@ It is assumed that
 * this field has at least a time resolution of 5 minutes or less
 * power is in W
 * Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
-
 
 ### Solaranzeige Integration
 This application is designed to run seamlessly alongside [solaranzeige](https://solaranzeige.de). Hence, if installed on the same host, the `[Influx]` configuration section discussed in previous section may very well look like this:
