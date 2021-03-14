@@ -29,6 +29,8 @@ class SolCast(Forecast):
         self._db          = None                                                         # DBRepository object once DB is opened
         self._storeDB     = self.config['SolCast'].getboolean('storeDB', 0)              # ... store to DB
         self._storeInflux = self.config['SolCast'].getboolean('storeInflux')             # ... store to Influx (one of the two must be true to make sense to get data from solcast)
+        self._storeCSV    = self.config['SolCast'].getboolean('storeCSV')                # ... store to csv in storePath
+        self.storePath    = self.config['OpenWeatherMap'].get('storePath')
         self._force       = self.config['SolCast'].getboolean('force', False)            # force download - note that we are restricted in number of downloads/day
         if self._force:
             print("Warning --- SolCast download forced!!! Note limits in number of downloads/day!")
@@ -74,10 +76,10 @@ class SolCast(Forecast):
             #pickle.dump(forecasts, myFile)
             #myFile.close()
             #
-            # myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
-            # forecasts_1 = pickle.load(myFile)
-            # forecasts_2 = forecasts_1
-            # myFile.close()
+            #myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
+            #forecasts_1 = pickle.load(myFile)
+            #forecasts_2 = forecasts_1
+            #myFile.close()
             # --------- debugging end
 
             df                  = pd.DataFrame(forecasts_1['forecasts'])
@@ -121,3 +123,6 @@ class SolCast(Forecast):
             if self._storeDB: 
                 del self._storeDB
                 self._storeDB = None
+            if self._storeCSV:
+                self.csvName  = 'solcast_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
+                self.writeCSV()

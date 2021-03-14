@@ -12,8 +12,11 @@ class OWMForecast(Forecast):
     def __init__(self, config):
         """Initialize DWDForecast
         config      configparser object with section [OpenWeatherMap]"""
-        self.config   = config
-        self.SQLTable = 'owm'
+
+        super().__init__()
+        self.config    = config
+        self.SQLTable  = 'owm'
+        self.storePath = self.config['OpenWeatherMap'].get('storePath')
 
     def getForecast_OWM(self):
         try:
@@ -28,11 +31,12 @@ class OWMForecast(Forecast):
             df_idx            = pd.to_datetime(df['dt'], unit='s', utc=True)
             df                = df.set_index(df_idx)
             df.index.name     = 'PeriodEnd'
-            drop              = ['dt', 'weather']
-            if 'rain' in df:  drop.append('rain')
-            if 'snow' in df:  drop.append('snow')
+            drop              = []
+            for field in ['dt', 'weather', 'rain', 'snow', 'wind_gust']:
+                if field in df: drop.append(field)
             self.DataTable    = df.drop(drop, axis=1)                                    # drop columns which are either not useful or non-float
             self.IssueTime    = str(datetime.fromtimestamp(req.json()['current']['dt'], timezone.utc))
+            self.csvName      = 'owm_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
 
         except Exception as e:
             print("getForecast_OWM: " + str(e))
