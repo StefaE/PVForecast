@@ -24,11 +24,16 @@ class InfluxRepo:
         self.config     = config
         self._host      = self.config['Influx'].get('host', 'localhost')
         self._port      = self.config['Influx'].getint('port', 8086)
-        self._database  = self.config['Influx'].get('database')
+        self._database  = self.config['Influx'].get('database', None)
         self._token     = self.config['Influx'].get('token', None)
         self._org       = self.config['Influx'].get('org', None)
         self._influx_V2 = self.config['Influx'].getboolean('influx_v2', False)
         try:
+            if self._influx_V2:
+                if self._database is None: self._database = self.config['Influx'].get('bucket')
+                if not self._host.startswith('http://'): self._host = 'http://' + self._host
+            if self._database is None:
+                raise Exception("Influx: No database (bucket) defined")
             if self._influx_V2 and not hasInflux_V2:
                 raise Exception("influxdb_client needs be installed for Influx 2.0 support")
             elif not self._influx_V2 and not hasInflux_V1:
@@ -53,12 +58,13 @@ class InfluxRepo:
                 client.write_points(df, data.SQLTable)
                 client.write_points(df_log, 'forecast_log', tag_columns=['Table'])
             else:
-                client    = InfluxDBClient_V2(url="http://"+str(self._host)+":"+str(self._port), token=self._token, org=self._org)
+                client    = InfluxDBClient_V2(url=self._host+":"+str(self._port), token=self._token, org=self._org)
                 write_api = client.write_api()
                 write_api.write(self._database, record=df,     data_frame_measurement_name=data.SQLTable)
                 write_api.write(self._database, record=df_log, data_frame_measurement_name='forecast_log', data_frame_tag_columns=['Table'])
-                print("writing forecast_log done")
-
+                write_api.close()
+                client.close()
+ 
     def getLastIssueTime(self, table):
         IssueTime = None
         if not self._influx_V2:
@@ -67,17 +73,18 @@ class InfluxRepo:
             for row in select.get_points():
                 IssueTime = row['IssueTime']
         else:
-            client    = InfluxDBClient_V2(url="http://"+str(self._host)+":"+str(self._port), token=self._token, org=self._org)
+            client    = InfluxDBClient_V2(url=self._host+":"+str(self._port), token=self._token, org=self._org)
             query_api = client.query_api()
-            rows      = query_api.query_stream('from(bucket:"' + self._database + '")' +
-                                               '  |> range(start: -1d)' +
-                                               '  |> filter(fn: (r) => r._measurement == "forecast_log" and' +
-                                               '                       r._field       == "IssueTime" and ' +
-                                               '                       r.Table        == "' + table + '")' +
+            rows      = query_api.query_stream('from(bucket:"' + self._database + '") '
+                                               '  |> range(start: -3h) '
+                                               '  |> filter(fn: (r) => r._measurement == "forecast_log") '
+                                               '  |> filter(fn: (r) => r._field       == "IssueTime") '
+                                               '  |> filter(fn: (r) => r.Table        == "' + table + '") '
                                                '  |> last()')
             for row in rows:
-                print(row)
-            pass
+                IssueTime = row['_value']
+            client.close()
+
         if IssueTime is not None:
             IssueTime = datetime.fromtimestamp(IssueTime)
             IssueTime = pytz.timezone('UTC').localize(IssueTime)
@@ -85,7 +92,7 @@ class InfluxRepo:
             IssueTime = datetime(1990, 1, 1, 0, 0, 0, 0,timezone.utc)
         return(IssueTime)
 
-    def getPostData(self, solcast):
+    def getPostData(self, solcast, power_field):
         try:
             if self._influx_V2:
                 raise Exception("Solcast post not supported for Influx V2 databases")
@@ -98,9 +105,9 @@ class InfluxRepo:
             endTime   = endTime.strftime('%Y-%m-%dT%H:%M:%SZ')
             startTime = startTime.strftime('%Y-%m-%dT%H:%M:%SZ')
 
-            meas, field = self.config['Influx'].get('power_field').split('.')
+            meas, field = self.config['Influx'].get(power_field).split('.')
 
-            client      = InfluxDBClient(host=self._host, port=self._port, database=self._database)
+            client    = InfluxDBClient(host=self._host, port=self._port, database=self._database)
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []

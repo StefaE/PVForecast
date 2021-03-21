@@ -43,9 +43,9 @@ A couple of more options can be configured, but are left out of this brief descr
       - [Split Array System Configuration](#split-array-system-configuration)
     + [Data Storage](#data-storage)
       - [SQLite Storage](#sqlite-storage)
-      - [Influx Storage](#influx-storage)
-    + [.csv File Storage](#csv-file-storage)
-    + [Solcast Tuning](#solcast-tuning)
+      - [Influx v1.x Storage](#influx-v1x-storage)
+      - [Influx v2.x Storage](#influx-v2x-storage)
+      - [.csv File Storage](#csv-file-storage)
     + [Solaranzeige Integration](#solaranzeige-integration)
   * [Installation](#installation)
     + [The Basics](#the-basics)
@@ -54,6 +54,8 @@ A couple of more options can be configured, but are left out of this brief descr
     + [Optional](#optional)
   * [Running the Script](#running-the-script)
   * [To Do](#to-do)
+  * [Deprecated](#deprecated)
+    + [Solcast Tuning](#solcast-tuning)
   * [Version History](#version-history)
   * [Disclaimer](#disclaimer)
   * [License](#license)
@@ -100,19 +102,21 @@ Depending on the data source, various forecast algorithms are available. The con
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    # post            = 0         # enable posting and tuning (deprecated)
-    # interval        = 60        # interval at which SolCast is read (during daylight only)
-    Latitude          = 51.8
-    Longitude         =  6.1
+    # interval        = 30        # interval at which SolCast is read (during daylight only)
+    # Latitude          = 50.2    # defaults describe Frankfurt, Germany
+    # Longitude         =  8.7
 ```
 
-[Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 20 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
-
-To stay within the limits of 20 API calls/day, the API is only called with an `interval = 60` minutes between sunrise and sunset only. That's the sole use of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated)
+[Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
 [Since tuning was deprecated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support split-array setups. In such a situation, a `resource_id` and `resource_id_2` can be provided. Both will be queried at the same times. Individual and total forecast results will be stored in the database(s)
+
+To stay within the limits of 50 API calls/day, the API is only called with an `interval = 30` minutes between sunrise and sunset only, even if the script is called more often. That's the sole use of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated).
+
+* for split array configurations, this is insufficient in summer - the longest period (at the nothern border of Germany) of daylight is ~17 hours. Hence this would create up to 17 * 2 arrays * 2/h = 68 calls/day.
+* future versions of the software may take this into account
 
 ### **OWM** configuration
 ```
@@ -321,13 +325,12 @@ Note that if the configuration file is changed on a running system, more or less
 * dropped fields are simply left empty (which SQLite handles relatively efficiently)
 * however, new fields are not added dynamically - it is advised to drop the old database in such cases, which causes dynamic creation of a new one.
 
-#### Influx Storage
+#### Influx v1.x Storage
 ```
 [Influx]
     host              = <your_hostname>         # default: localhost
     # port            = 8086
     database          = <your_influx_db_name>   
-    power_field       = PV.Gesamtleistung
 ```
 
 This will create the following _measurements_ (akin tables) in the defined Influx database:
@@ -341,8 +344,6 @@ forecast_log | log table on data downloads from [forecast sources](#forecast-sou
 
 where `<model>` refers to one of the [irradiance](#convert-weather-data-to-irradation-data) models calculated
 
-`power_field` will be discussed in [Solcast Tuning](#solcast-tuning) below
-
 The `database` must pre-exist in Influx. If it does not, the following manual operations can create it:
 ```
 ~ $ influx
@@ -353,33 +354,22 @@ The `database` must pre-exist in Influx. If it does not, the following manual op
 ~ $
 ```
 
-### .csv File Storage
+#### Influx v2.x Storage
+Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
+```
+[Influx]
+    influx_V2       = 1              # enable Influx 2.x support
+    token           = <your token>
+    org             = <your org>
+    # optionally, the entry database can be named bucket. If not existent, the database is used
+    # to identify what is called the bucket in Influx v2.x
+    # bucket        = <your_influx_bucket_name>
+```
+
+#### .csv File Storage
 `storeCSV = 1` store output in .csv files at `storePath`. This is mainly for debugging. 
 
 SolCast can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
-
-### Solcast Tuning
-**Deprecated by SolCast**
-Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
-
-```
-[SolCast]
-    post = 1
-```
-in the configuration file. But of course, it requires that such performance data is available locally.
-
-The script assumes that performance data is available in the same Influx database as configured for forecast data storage. Saying
-```
-[Influx]
-    database    = <your_influx_db_name>
-    power_field = PV.Gesamtleistung
-```
-assumes that `<your_influx_db_name>` contains a measurement (table) `PV` with a field `Gesamtleistung` which has regular recordings of the PV generated power.
-
-It is assumed that 
-* this field has at least a time resolution of 5 minutes or less
-* power is in W
-* Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
 
 ### Solaranzeige Integration
 This application is designed to run seamlessly alongside [solaranzeige](https://solaranzeige.de). Hence, if installed on the same host, the `[Influx]` configuration section discussed in previous section may very well look like this:
@@ -480,23 +470,56 @@ After downloading the script from Github, into a directory of your choosing (eg.
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-0 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
+*/30 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
 ```
-which would run the script every hour. Replace `SolCastLight.py` with the `PVFirecast.py` to run the full script.
+which would run the script every 30min. Replace `SolCastLight.py` with the `PVFirecast.py` to run the full script.
 
 A great explanation of `cron` is [here](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
 
 **Note:** The script doesn't do much in terms of housekeeping (eg., limit size of SQLite database or `err.txt` file used above to redirect error messages).
 
 ## To Do
-* PV system modeling (using config section `[PVSystem]`) does nothing to model systems with panels in multiple orientations. The basic structure is prepared to handle this, but it is not implemented as of now.
+* more clever use of 50 allowed API calls/day for SolCast
+
+## Deprecated
+Following subjects have been deprecated by the data providers. They are still supported by `PVForecast` as some functionality still seems to work.
+
+### Solcast Tuning
+**Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
+
+```
+[SolCast]
+    post = 1
+```
+in the configuration file. But of course, it requires that such performance data is available locally.
+
+The script assumes that performance data is available in the same Influx database as configured for forecast data storage. Saying
+```
+[Influx]
+    database      = <your_influx_db_name>
+    power_field   = PV.Gesamtleistung
+    power_field_2 = PV.Leistung_Str_2
+```
+assumes that `<your_influx_db_name>` contains a measurement (table) `PV` with a field `Gesamtleistung` which has regular recordings of the PV generated power. 
+
+For split array configurations (allowed by SolCast since official deprecation of tuning), a secondary tuning field `power_field_2` can be defined. In posting, `power_field` will be associated with `resource_id` and `power_field_2` with `resource_id_2`. This still seems to work as of today (2021-03-21). See [Solcast Configuration](#solcast-configuration) on guidence for split array support.
+
+It is assumed that 
+* this field has at least a time resolution of 5 minutes or less
+* power is in W
+* Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
+
+**Influx 2.0** is not supported for SolCast posting (this would need an update in `influx.py` for procedure `getPostData`)
+
 
 ## Version History
 v1.00.00    2021-02-06  initial public release
 
 v1.01.00    -in progress-
-- split array support for MOSMIX and OWM (SolCast supports two arrays only)
-- storeCSV now enabled for all data sources
+- [split array support](#split-array-system-configuration) for MOSMIX and OWM (SolCast supports two arrays only)
+- [Influx v2.x](#influx-v2x-storage) support
+- [storeCSV](#csv-file-storage) now enabled for all data sources
+- SolCast default `interval` reduced to 30m
 - various bug fixes, documentation improvement
 
 ## Disclaimer

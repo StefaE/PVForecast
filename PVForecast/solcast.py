@@ -25,7 +25,7 @@ class SolCast(Forecast):
         self._site        = RooftopSite(api_key, resource_id)
         if resource_id_2 is not None: self._site_2 = RooftopSite(api_key, resource_id_2)
         else:                         self._site_2 = None
-        self._interval    = self.config['SolCast'].getint('interval', 60) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
+        self._interval    = self.config['SolCast'].getint('interval', 30) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
         self._db          = None                                                         # DBRepository object once DB is opened
         self._storeDB     = self.config['SolCast'].getboolean('storeDB', 0)              # ... store to DB
         self._storeInflux = self.config['SolCast'].getboolean('storeInflux')             # ... store to Influx (one of the two must be true to make sense to get data from solcast)
@@ -38,8 +38,8 @@ class SolCast(Forecast):
         self.postDict     = None                                                         # dictionary to post to solcat
 
     def _doDownload(self):
-        latitude       = self.config['SolCast'].getfloat('Latitude')
-        longitude      = self.config['SolCast'].getfloat('Longitude')
+        latitude       = self.config['SolCast'].getfloat('Latitude', 50.2)               # default describe Frankfurt, Germany
+        longitude      = self.config['SolCast'].getfloat('Longitude', 8.7)
         location       = LocationInfo('na', 'na', 'UTC', latitude=latitude, longitude=longitude)
         now_utc        = datetime.now(timezone.utc)
         mySun          = sun(location.observer, date=now_utc)
@@ -53,7 +53,7 @@ class SolCast(Forecast):
                 else:
                     self._influx    = InfluxRepo(self.config)
                     self.last_issue = self._influx.getLastIssueTime(self.SQLTable)
-                delta_t          = round((now_utc - self.last_issue).total_seconds()/60)
+                delta_t             = round((now_utc - self.last_issue).total_seconds()/60)
                 if self._force or delta_t > self._interval:                              # download SolCast again
                     retVal = True
                     print("Message - downloading SolCast data at (UTC): " + str(now_utc))
@@ -76,10 +76,10 @@ class SolCast(Forecast):
             #pickle.dump(forecasts, myFile)
             #myFile.close()
             #
-            #myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
-            #forecasts_1 = pickle.load(myFile)
-            #forecasts_2 = forecasts_1
-            #myFile.close()
+            # myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
+            # forecasts_1 = pickle.load(myFile)
+            # forecasts_2 = forecasts_1
+            # myFile.close()
             # --------- debugging end
 
             df                  = pd.DataFrame(forecasts_1['forecasts'])
@@ -104,22 +104,29 @@ class SolCast(Forecast):
             if self.config['SolCast'].getboolean('storeInflux'):
                 self._influx.loadData(self)                                              # store data to Influx, client was opened in self._doDownload()
                 if self.config['SolCast'].getboolean('post', 0):
-                    self.postDict = self._influx.getPostData(self)
-                    if self.postDict is not None:
-                        if self._storeDB:
-                            myPost           = Forecast()
-                            myPost.DataTable = pd.DataFrame.from_dict(self.postDict['measurements'])[['period_end', 'total_power']]
-                            myPost.DataTable['period_end'] = pd.to_datetime(myPost.DataTable['period_end'])
-                            myPost.DataTable.rename(columns={'period_end' : 'PeriodEnd'}, inplace=True)
-                            myPost.DataTable.set_index('PeriodEnd', inplace=True)
-                            myPost.IssueTime = self.IssueTime
-                            myPost.SQLTable  = self.SQLTable + '_post'
-                            self._db.loadData(myPost)
-                        try:
-                            self._site.post_measurements(self.postDict)
-                        except Exception as e:
-                            print ("getSolCast/post: " + str(e))
-                        pass
+                    power_fields  = ['power_field', 'power_field_2']
+                    for field in power_fields:
+                        if field == 'power_field_2': suffix = '_2'
+                        else:                        suffix = ''
+                        if (self.config.has_option('Influx', field)):
+                            self.postDict = self._influx.getPostData(self, field)
+                            if self.postDict is not None:
+                                if self._storeDB:
+                                    myPost           = Forecast()
+                                    myPost.DataTable = pd.DataFrame.from_dict(self.postDict['measurements'])[['period_end', 'total_power']]
+                                    myPost.DataTable['period_end'] = pd.to_datetime(myPost.DataTable['period_end'])
+                                    myPost.DataTable.rename(columns={'period_end' : 'PeriodEnd'}, inplace=True)
+                                    myPost.DataTable.set_index('PeriodEnd', inplace=True)
+                                    myPost.IssueTime = self.IssueTime
+                                    myPost.SQLTable  = self.SQLTable + '_post' + suffix
+                                    self._db.loadData(myPost)
+                                try:
+                                    if suffix == '_2': self._site_2.post_measurements(self.postDict)
+                                    else:              self._site.post_measurements(self.postDict)
+                                except Exception as e:
+                                    print ("getSolCast/post: " + str(e))
+                            else:
+                                print("Warning --- posting attempted without config file entry [Influx].[power_field]")
             if self._storeDB: 
                 del self._storeDB
                 self._storeDB = None
