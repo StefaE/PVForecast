@@ -231,6 +231,7 @@ class PVModel(Forecast):
         Populates self.sim_result      pandas dataframe with simulation results"""
 
         if modelLst is not None:
+            modelLst     = modelLst.lower()
             if modelLst != 'all' and model != modelLst:                                   # we have an explict list of models to calculate
                 modelLst = modelLst.replace(" ", "")
                 models   = modelLst.split(",")
@@ -240,6 +241,7 @@ class PVModel(Forecast):
             self.csvName = re.sub(r'weather', 'sim', weather.csvName)
 
         try:
+            model = model.lower()
             self.getIrradiance(weather, model)
             self._mc.run_model(self.irradiance)
             cols = ['ghi', 'dni', 'dhi']

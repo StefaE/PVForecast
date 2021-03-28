@@ -102,21 +102,29 @@ Depending on the data source, various forecast algorithms are available. The con
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    # interval        = 30        # interval at which SolCast is read (during daylight only)
-    # Latitude          = 50.2    # defaults describe Frankfurt, Germany
-    # Longitude         =  8.7
+    # interval        =  0        # interval at which SolCast is read (during daylight only)
+    # Latitude        = 50.2      # defaults describe Frankfurt, Germany
+    # Longitude       =  8.7
 ```
 
 [Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
-[Since tuning was deprecated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support split-array setups. In such a situation, a `resource_id` and `resource_id_2` can be provided. Both will be queried at the same times. Individual and total forecast results will be stored in the database(s)
+[Since tuning was deprecated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support dual-array setups (eg., east/west). In such a situation, an additional `resource_id_2` can be provided. It will be queried at the same times as `resource_id`. Individual and total forecast results will be stored in the database(s)
 
-To stay within the limits of 50 API calls/day, the API is only called with an `interval = 30` minutes between sunrise and sunset only, even if the script is called more often. That's the sole use of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated).
+To stay within the limits of 50 API calls/day, the script calls the API only between sunrise and sunset. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
 
-* for split array configurations, this is insufficient in summer - the longest period (at the nothern border of Germany) of daylight is ~17 hours. Hence this would create up to 17 * 2 arrays * 2/h = 68 calls/day.
-* future versions of the software may take this into account
+value | meaning
+------|---------
+0     | **Default**: call API every 15min (single array) or 30min (dual-array). To not exceed maximum API calls, extend interval to 30min (60min) after sunrise and before sunset on long days. Hence, this provides most accurate (short-term) forecasts during mid-day.
+early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning
+late  | same as `0`, but all intervall extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon
+number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minues.
+
+There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [below](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
+
+Purpose of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated) is to know sunrise and sunset times. Defaults are for Frankfurt, Germany.
 
 ### **OWM** configuration
 ```
@@ -470,9 +478,11 @@ After downloading the script from Github, into a directory of your choosing (eg.
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-*/30 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
 ```
-which would run the script every 30min. Replace `SolCastLight.py` with the `PVFirecast.py` to run the full script.
+which would run the script every 15min (recommended). 
++ 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
++ Replace `SolCastLight.py` with the `PVForecast.py` to run the full script.
 
 A great explanation of `cron` is [here](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
 
@@ -515,11 +525,12 @@ It is assumed that
 ## Version History
 v1.00.00    2021-02-06  initial public release
 
-v1.01.00    -in progress-
-- [split array support](#split-array-system-configuration) for MOSMIX and OWM (SolCast supports two arrays only)
+v1.01.00    2021-03-28
++ SolCast:
+  - [SolCast](#solcast-configuration) default `interval` management to make optimal use of permitted 50 API calls/day
+  - [split array support](#split-array-system-configuration) for MOSMIX and OWM (SolCast supports two arrays only)
 - [Influx v2.x](#influx-v2x-storage) support
 - [storeCSV](#csv-file-storage) now enabled for all data sources
-- SolCast default `interval` reduced to 30m
 - various bug fixes, documentation improvement
 
 ## Disclaimer

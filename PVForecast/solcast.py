@@ -1,5 +1,5 @@
 from pysolcast.rooftop import RooftopSite
-from datetime          import datetime, timezone
+from datetime          import datetime, timezone, timedelta
 from astral            import LocationInfo
 from astral.sun        import sun
 
@@ -18,24 +18,31 @@ class SolCast(Forecast):
         config      configparser object with section [SolCast]"""
 
         super().__init__()
-        self.config       = config
-        resource_id       = self.config['SolCast'].get('resource_id')
-        resource_id_2     = self.config['SolCast'].get('resource_id_2', None)            # 2nd resource_id for split array installations
-        api_key           = self.config['SolCast'].get('api_key')
-        self._site        = RooftopSite(api_key, resource_id)
+        self.config        = config
+        resource_id        = self.config['SolCast'].get('resource_id')
+        resource_id_2      = self.config['SolCast'].get('resource_id_2', None)           # 2nd resource_id for split array installations
+        api_key            = self.config['SolCast'].get('api_key')
+        self._site         = RooftopSite(api_key, resource_id)
         if resource_id_2 is not None: self._site_2 = RooftopSite(api_key, resource_id_2)
         else:                         self._site_2 = None
-        self._interval    = self.config['SolCast'].getint('interval', 30) - 2            # set default polling interval to 60min, 2min slack in case we have hourly crontab
-        self._db          = None                                                         # DBRepository object once DB is opened
-        self._storeDB     = self.config['SolCast'].getboolean('storeDB', 0)              # ... store to DB
-        self._storeInflux = self.config['SolCast'].getboolean('storeInflux')             # ... store to Influx (one of the two must be true to make sense to get data from solcast)
-        self._storeCSV    = self.config['SolCast'].getboolean('storeCSV')                # ... store to csv in storePath
-        self.storePath    = self.config['OpenWeatherMap'].get('storePath')
-        self._force       = self.config['SolCast'].getboolean('force', False)            # force download - note that we are restricted in number of downloads/day
+        interval           = self.config['SolCast'].get('interval', '0').lower()         # set polling interval
+        try:
+            self._interval = int(interval)
+        except:
+            if interval   == 'late':  self._interval = -1                                # call often late,  at cost of neglecting early
+            elif interval == 'early': self._interval = -2                                # call often early, at cost of neglecting late
+            else:                     self._interval =  0                                # call often over mid-day
+        self._db           = None                                                        # DBRepository object once DB is opened
+        self._storeDB      = self.config['SolCast'].getboolean('storeDB', 0)             # ... store to DB
+        self._storeInflux  = self.config['SolCast'].getboolean('storeInflux')            # ... store to Influx (one of the two must be true to make sense to get data from solcast)
+        self._storeCSV     = self.config['SolCast'].getboolean('storeCSV')               # ... store to csv in storePath
+        self.storePath     = self.config['OpenWeatherMap'].get('storePath')
+        self._force        = self.config['SolCast'].getboolean('force', False)           # force download - note that we are restricted in number of downloads/day
+        self._apiCalls     = 50                                                          # max API calls per day
         if self._force:
             print("Warning --- SolCast download forced!!! Note limits in number of downloads/day!")
-        self.SQLTable     = 'solcast'
-        self.postDict     = None                                                         # dictionary to post to solcat
+        self.SQLTable      = 'solcast'
+        self.postDict      = None                                                        # dictionary to post to solcat
 
     def _doDownload(self):
         latitude       = self.config['SolCast'].getfloat('Latitude', 50.2)               # default describe Frankfurt, Germany
@@ -54,8 +61,28 @@ class SolCast(Forecast):
                     self._influx    = InfluxRepo(self.config)
                     self.last_issue = self._influx.getLastIssueTime(self.SQLTable)
                 delta_t             = round((now_utc - self.last_issue).total_seconds()/60)
-                if self._force or delta_t > self._interval:                              # download SolCast again
-                    retVal = True
+                if self._force or self._interval > 0:                                    # we use an explicit calling interval
+                    if self._force or delta_t > self._interval - 2:
+                        retVal = True
+                else:                                                                    # self._interval = 0: Choose optimal interval
+                    optimal      = 15                                                    # optimal interval for single site / dual site setup
+                    have         = self._apiCalls - 1                                    # keep one API call as reserve
+                    if self._site_2 is not None:
+                        optimal  = optimal*2
+                        have     = int(have/2)                                           # split-arrays need two calls per download
+                    need         = int((int((mySun['sunset'] - mySun['sunrise']).total_seconds()/60)+1)/optimal)+1     # number of 'optimal' minute intervals between sunrise and sunset
+                    long         = need - have                                                                         # number of times where we can only call at longer intervals
+                    if   self._interval ==  0 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal:
+                        interval = optimal*2
+                    elif self._interval == -1 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal*2:    # focus on late,  neglect early
+                        interval = optimal*2
+                    elif self._interval == -2 and (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal*2:     # focus on early, neglect late
+                        interval = optimal*2
+                    else:
+                        interval = optimal
+                    if delta_t > interval - 2:
+                        retVal = True
+                if retVal:
                     print("Message - downloading SolCast data at (UTC): " + str(now_utc))
             else:
                 print("Warning --- getting SolCast data not supported without database storage enabled (storeDB or storeInflux)")
@@ -98,7 +125,11 @@ class SolCast(Forecast):
                     df[c]       = df[c + '_1'] + df[c + '_2']
             df.index.name       = 'PeriodEnd'
             self.DataTable      = df*1000                                                # convert kWh to Wh
-            self.IssueTime      = str(self.DataTable.index[0] - period)
+            issueTime           = (self.DataTable.index[0] - period).to_pydatetime()
+            now_utc             = datetime.now(timezone.utc)
+            if (now_utc - issueTime).total_seconds()/60 > 8:                             # we are more than 8min late
+                issueTime       = issueTime + timedelta(0, 15*60)                        # add 15 min to IssueTime
+            self.IssueTime      = str(issueTime)
             self.InfluxFields   = self.get_ParaNames()
             if self._storeDB: self._db.loadData(self)                                    # store data in repository, db was opened in self._doDownload()
             if self.config['SolCast'].getboolean('storeInflux'):
