@@ -57,6 +57,7 @@ A couple of more options can be configured, but are left out of this brief descr
   * [Deprecated](#deprecated)
     + [Solcast Tuning](#solcast-tuning)
   * [Version History](#version-history)
+  * [Acknowlegements](#acknowlegements)
   * [Disclaimer](#disclaimer)
   * [License](#license)
 
@@ -532,6 +533,9 @@ v1.01.00    2021-03-28
 - [Influx v2.x](#influx-v2x-storage) support
 - [storeCSV](#csv-file-storage) now enabled for all data sources
 - various bug fixes, documentation improvement
+
+## Acknowlegements
+Thanks to all who raised issues or helped in testing!
 
 ## Disclaimer
 The software pulls weather data from various weather sources. It is the users responsability to adhere to the use conditions of these sources. 
