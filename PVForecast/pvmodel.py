@@ -33,8 +33,13 @@ class PVModel(Forecast):
             self.config['DEFAULT']['NominalEfficiency']  =  '0.96'                       # nominal inverter efficiency, default of pvwatts model
             self.config['DEFAULT']['TemperatureCoeff']   = '-0.005'                      # temperature coefficient of module, default of pvwatts model
             self.config['DEFAULT']['TemperatureModel']   = 'open_rack_glass_glass'       # https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.temperature.sapm_cell.html
+            self.config['DEFAULT']['clearsky_model']     = 'simplified_solis'            # default clearsky model
             self.config['DEFAULT']['Altitude']           = '0'                           # default altitude sea level
             self.config['DEFAULT']['Model']              = 'CEC'                         # default PV modeling stratey
+            if section != 'PVSystem':
+                for item in list(self.config.items('PVSystem')):                         # copy 'PVSystem' into default, so that it serves as fallback for 'PVSystem_i' (split-arrays)
+                    self.config['DEFAULT'][item[0]] = item[1]
+
             self._weatherFields = {'dwd': { 'temp_air'   : 'TTT',                        # translation: DWD parameter names --> pvlib parameter names
                                             'wind_speed' : 'FF',                         #    Note that temp_air and temp_dew are in Celsius, TTT in Kelvin
                                             'pressure'   : 'PPPP',
@@ -60,6 +65,8 @@ class PVModel(Forecast):
             self.irradiance         = None                                               # calculated irradiance data
             self.pv_model           = None                                               # CEC or PVWatts once solar system is defined
             self.SQLTable           = self._cfg.lower()                                  # which SQL table name is this data stored to (see DBRepository.loadData())
+            self.storePath          = self.config[self._cfg].get('storePath')            # where to store .csv file
+
 
             if (self.config[self._cfg].get('Model') == 'CEC'):
                 self._init_CEC()
@@ -189,7 +196,7 @@ class PVModel(Forecast):
                 dhi  = np.array(erbs['dhi'])
                 kt   = np.array(erbs['kt'])
             elif (model == 'clearsky'):
-                clearsky_model  = self.config[self._cfg].get('clearsky_model', 'simplified_solis')
+                clearsky_model  = self.config[self._cfg].get('clearsky_model')
                 self.irradiance = self._location.get_clearsky(weatherData.index,         # calculate clearsky ghi, dni, dhi for clearsky
                                                               model=clearsky_model)
             elif (model == 'clearsky_scaling' or model == 'campbell_norman'):
@@ -224,12 +231,17 @@ class PVModel(Forecast):
         Populates self.sim_result      pandas dataframe with simulation results"""
 
         if modelLst is not None:
+            modelLst     = modelLst.lower()
             if modelLst != 'all' and model != modelLst:                                   # we have an explict list of models to calculate
                 modelLst = modelLst.replace(" ", "")
                 models   = modelLst.split(",")
                 if model not in models:                                                   # request was for something else ...
                     return None
+        if weather.csvName is not None:
+            self.csvName = re.sub(r'weather', 'sim', weather.csvName)
+
         try:
+            model = model.lower()
             self.getIrradiance(weather, model)
             self._mc.run_model(self.irradiance)
             cols = ['ghi', 'dni', 'dhi']
@@ -283,11 +295,47 @@ class PVModel(Forecast):
                 else: drop.append(col)
             elif col == 'kt_erbs_kt': drop.append(col)                                   # redundant as kt is input to (experimental) erbs_kt
         if (len(drop) > 0): self.DataTable = self.DataTable.drop(drop, axis=1)
+        
+    def run_splitArray(self, weather: Forecast, modelLst = 'all'):
+        try:
+            if self._cfg != 'PVSystem':
+                raise Exception ("ERROR --- run_splitArray can only be called on lead array 'PVSystem', not " + self._cfg)
+            self.run_allModels(weather, modelLst)
+            pat       = re.compile('^PVSystem_')
+            followers = [elem for elem in self.config.sections() if pat.match(elem)]
 
-    def writeCSV(self, csvName):                                                         # write self.weatherData to .csv file
-        """Store simulated PV power in .csv file"""
+            if len(followers) > 0:                                                       # we have a split-array configuration
+                storage        = self.config['PVSystem'].get('storage', 'sum').lower()   # 'individual', 'both' or 'sum'
+                pat            = re.compile('^(ac|dc)_')                                 # PV output cols match this regex
+                output         = [ c for c in list(self.DataTable) if pat.match(c)]
+                if storage == 'individual' or storage == 'both':
+                    suffix     = '_' + self.config['PVSystem'].get('suffix', '1')        # determine suffix of first measurement
+                    rename     = { c : c + suffix for c in output }
+                    if storage == 'individual':
+                        self.DataTable.rename(columns = rename, inplace = True)          # rename columns to contain suffix
+                    else:                                                                # initialize a copy of the output columns
+                        df     = self.DataTable[output].copy()
+                        df.rename(columns = rename, inplace = True)
+                        self.DataTable    = self.DataTable.join(df, how='inner')         # this basically duplicates output columns; we'll add follower results to base cols (without suffix)
 
-        path   = self.config[self._cfg].get('storePath')
-        fName  = re.sub(r'\.kml$', '_sim.csv.gz', csvName)
-        self.DataTable.to_csv(path + "/" + fName, compression='gzip')
-        return()
+                for elem in followers:
+                    pv         = PVModel(self.config, elem)
+                    pv.run_allModels(weather, modelLst)
+                    df         = pv.DataTable[output].copy()                             # get only output columns
+                    if storage == 'both' or storage == 'sum':
+                        self.DataTable[output] = self.DataTable[output] + df             # add new values to existing sum
+                        pass
+                    if storage == 'individual' or storage == 'both':
+                        suffix = re.search('_.+$', elem).group(0)                        # must match, since we built 'followers' based on 'PVSystem_' regex
+                        rename = { c : c + suffix for c in output }
+                        df.rename(columns = rename, inplace = True)                      # rename columns to contain suffix
+                        self.DataTable = self.DataTable.join(df, how = 'inner')          # ... and join up
+
+                pat = re.compile('^dc_')
+                self.InfluxFields = [ c for c in self.DataTable.columns if pat.match(c)]
+                pass
+
+        except Exception as e:
+            print ("readKML: " + str(e))
+            sys.exit(1)
+        

@@ -2,7 +2,7 @@
 Rooftop PV production forecast
  
 ## Introduction
-This project supports an extensive set of production forecasts for PV rooftop installations. Various weather data sources, PV modeling algorithms and storage methods for results can be used. 
+This project supports an extensive set of production forecasts for PV rooftop installations. Various weather [data sources](#forecast-sources), [PV modeling algorithms](#forecast-models) and [storage methods](#data-storage) for results can be used. Split array PV installations are supported.
 
 The project has been developped on Python3 and runs on Raspberries and integrates with [solaranzeige](https://solaranzeige.de) (see [Solaranzeige Integration](#solaranzeige-integration))
 
@@ -40,11 +40,12 @@ A couple of more options can be configured, but are left out of this brief descr
     + [Forecast models](#forecast-models)
       - [Convert Weather Data to Irradation Data](#convert-weather-data-to-irradation-data)
       - [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
+      - [Split Array System Configuration](#split-array-system-configuration)
     + [Data Storage](#data-storage)
       - [SQLite Storage](#sqlite-storage)
-      - [Influx Storage](#influx-storage)
-    + [.csv File Storage](#csv-file-storage)
-    + [Solcast Tuning](#solcast-tuning)
+      - [Influx v1.x Storage](#influx-v1x-storage)
+      - [Influx v2.x Storage](#influx-v2x-storage)
+      - [.csv File Storage](#csv-file-storage)
     + [Solaranzeige Integration](#solaranzeige-integration)
   * [Installation](#installation)
     + [The Basics](#the-basics)
@@ -53,6 +54,10 @@ A couple of more options can be configured, but are left out of this brief descr
     + [Optional](#optional)
   * [Running the Script](#running-the-script)
   * [To Do](#to-do)
+  * [Deprecated](#deprecated)
+    + [Solcast Tuning](#solcast-tuning)
+  * [Version History](#version-history)
+  * [Acknowlegements](#acknowlegements)
   * [Disclaimer](#disclaimer)
   * [License](#license)
 
@@ -98,19 +103,29 @@ Depending on the data source, various forecast algorithms are available. The con
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    # post            = 0         # enable posting and tuning (depricated)
-    # interval        = 60        # interval at which SolCast is read (during daylight only)
-    Latitude          = 51.8
-    Longitude         =  6.1
+    # interval        =  0        # interval at which SolCast is read (during daylight only)
+    # Latitude        = 50.2      # defaults describe Frankfurt, Germany
+    # Longitude       =  8.7
 ```
 
-[Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 20 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
-
-To stay within the limits of 20 API calls/day, the API is only called with an `interval = 60` minutes between sunrise and sunset only. That's the sole use of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated)
+[Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
-[Since tuning was depricated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support split-array setups. In such a situation, a `resource_id` and `resource_id_2` can be provided. Both will be queried at the same times. Individual and total forecast results will be stored in the database(s)
+[Since tuning was deprecated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support dual-array setups (eg., east/west). In such a situation, an additional `resource_id_2` can be provided. It will be queried at the same times as `resource_id`. Individual and total forecast results will be stored in the database(s)
+
+To stay within the limits of 50 API calls/day, the script calls the API only between sunrise and sunset. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
+
+value | meaning
+------|---------
+0     | **Default**: call API every 15min (single array) or 30min (dual-array). To not exceed maximum API calls, extend interval to 30min (60min) after sunrise and before sunset on long days. Hence, this provides most accurate (short-term) forecasts during mid-day.
+early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning
+late  | same as `0`, but all intervall extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon
+number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minues.
+
+There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [below](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
+
+Purpose of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated) is to know sunrise and sunset times. Defaults are for Frankfurt, Germany.
 
 ### **OWM** configuration
 ```
@@ -121,7 +136,7 @@ Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% an
 
 [OpenWeatherMap](https://openweathermap.org/price) offers free access to their API to regularly download weather forecasts. The registration process provides a 32 character API key.
 
-The weather forecast consists of approx. 10 parameters, including cloud coverage, which can be modelled to a PV forecast (see [Forecast Models](#forecast-models))
+The weather forecast consists of approx. 10 parameters, including cloud coverage, which can be modelled to a PV forecast (see [Forecast Models](#forecast-models)). The modelling strategy is controlled with the `Irradiance` parameter as described below.
 
 ### **MOSMIX** configuration
 ```
@@ -142,12 +157,15 @@ Two download schemes (as described [above](#forecast-sources)) exist. Keys `DWD_
 
 `keepKMZ_S`: in case of downloading the (huge) _MOSMIX_S_ file, they can be stored by enabling this option. **Note** that approx. 900MByte/day of storage space will be consumed!
 
+The modelling strategy used to convert weather data to irradiance is controlled with the `Irradiance` parameter as described in the next section.
+
 ### Forecast models
 Data from [OWM](#owm-configuration) and [MOSMIX](#mosmix-configuration) do not directly contain PV output power. This needs be modelled using functionality provided by [pvlib](https://pvlib-python.readthedocs.io/en/stable/). Multiple modelling approaches are supported, selected by the `Irradiance` parameter seen above. 
 
 Essentially, the modelling consists of a two-step approach:
-1. convert weather data to irradiation data (GHI, DNI, DHI)
-2. convert such irradiation data into PV output power
+1. convert weather data to irradiation data (GHI, DNI, DHI). Multiple conversion strategies are available and controlled with the `irradiance` parameter in the config section for `[DWD]` and `[OpenWeatherMap]`
+
+2. convert such irradiation data into PV output power. This is controlled in the config section `[PVSystem]`
 
 #### Convert Weather Data to Irradation Data
 
@@ -174,6 +192,8 @@ pressure  | pressure | PPPP
 temp_dew | dew_point | Td
 
 #### Convert Irradiation Data to PV Output Power
+In this section, we first describe how to model a single array PV System. The software also supports the configuration of split array systems. The necessary extensions are described in the next section.
+
 [pvlib](https://pvlib-python.readthedocs.io/en/stable/index.html) supports two modelling strategies for a PV system:
 1. model system with actual component parameters based on a `CEC` database provided with pvlib
 2. simplified `PVWatts` model
@@ -198,7 +218,24 @@ Both approaches are supported and selected based on `Model`
     SystemPower       =  9750     # system power [Wp]
     TemperatureCoeff  = -0.0036   # temperature coefficient (efficiency loss per 1C)
 ```
-The .csv are stored whereever pvlib installs on your system. A good place to start searching is in `/usr/local/lib/python3.7/dist-packages/pvlib/data` or `~/.local/lib/python3.8/site-packages/pvlib/data`. In that directory should be two files `sam-library-cec-inverters-2019-03-05.csv` and `sam-library-cec-modules-2019-03-05.csv` for inverters and modules respectively.
+The .csv are stored whereever pvlib installs on your system. This place can be found with
+`pip3 show pvlib` which returns something like:
+<pre>
+Name: pvlib
+Version: 0.8.1
+Summary: A set of functions and classes for simulating the performance of photovoltaic energy systems.
+Home-page: https://github.com/pvlib/pvlib-python
+Author: pvlib python Developers
+Author-email: None
+License: BSD 3-Clause
+Location: <b>installation_location</b>
+Requires: requests, scipy, numpy, pytz, pandas
+Required-by: 
+</pre>
+
+From this, you'll find in `installation_location/pvlib/data` two `.csv` files `sam-library-cec-inverters-2019-03-05.csv` and `sam-library-cec-modules-2019-03-05.csv` for inverters and modules respectively. The first column contain the names of supported inverters and modules. 
+
+Special characters and blanks need replaced with `_` in the config file. Hence, eg. `SMA America: SB10000TL-US [240V]` becomes `SMA_America__SB10000TL_US__240V_`
 
 If the (default) `CEC` approach is used, the selected model should at a minimum match the nameplate power of the installed panels (eg. 325Wp). The selected inverter is uncritical as long as the nameplate power is same or higher as installed inverter (eg. 10kW) - the modeling of inverters is relatively poor in pvlib, considering only a _NominalEfficency_.
 
@@ -230,10 +267,40 @@ Both models also need basic parameters of the system location and orientation:
 ```
 Since latitude and longitude parameters are also needed by [Solcast](#solcast-configuration) to calculate sunrise and sunset, it is efficient to put these two parameters into the `[Default]` section of the configuration file.
 
+#### Split Array System Configuration
+The above allows the definition of a _single array_ PV system. Split array systems (eg. with a west and east looking set of panels) can be configured as follows:
+```
+[PVSystem]
+    # define one array as explained in previous section
+    # additionally, following two parameters are supported:
+    suffix     = West             # value = name of this array; default '1'
+    storage    = both             # legal values: individual, both, sum (default)
+
+[PVSystem_East]
+    # define settings applicable to this array
+
+[PVSystem_South]
+    # define settings applicable to this array
+```
+There is no limit to the number of splits that can be defined.
+
+Names of the sub-arrays are arbitrary - anything after the `_` serves as a suffix (here eg. `East`, `South`). Since the first section does not contain such a name (the section is strictly named `[PVSystem]`) a suffix can be provided separately (eg. `West`)
+
+The secondary arrays (`[PVSystem_East]`, `[PVSystem_South]`, ...) inherit all settings from `[PVSystem]` except those which are explicitly overwritten. Typically, one wants to overwrite at least `Azimuth` and `Tilt`, likely also `NumStrings`, `NumPanels` and possibly panel types.
+
+PV output is calculated for each sub-array and creates parameters `dc_<irradiation_model>_<suffix>` and `ac_<irradiation_model>_<suffix>`. The parameter `storage` controls what is handed to the [data storage](#data-storage) module. Valid values are:
+
+Value | Function
+------|---------
+sum | **default**: only sum of all sub-arrays is stored (as `dc_/ac_<irradiation_model>`)
+individual | only the individual sub-array results are stored, but sum is not calculated
+both | individual results and sum are stored
+
 ### Data Storage
-Forecasting PV output power would be pointless, if the resulting data wouldn't be stored anywhere. The application supports two main storage models:
+Forecasting PV output power would be pointless, if the resulting data wouldn't be stored anywhere. The application supports three storage models:
 1. SQLite (file based relational database)
 2. Influx
+3. csv files
 
 The following configuration parameters control what is stored where and can be configured separately in sections `[SolCast], [OpenWeatherMap], [DWD]` or commonly in section `[Default]` (0 = disable, 1 = enable)
 
@@ -267,13 +334,12 @@ Note that if the configuration file is changed on a running system, more or less
 * dropped fields are simply left empty (which SQLite handles relatively efficiently)
 * however, new fields are not added dynamically - it is advised to drop the old database in such cases, which causes dynamic creation of a new one.
 
-#### Influx Storage
+#### Influx v1.x Storage
 ```
 [Influx]
     host              = <your_hostname>         # default: localhost
     # port            = 8086
     database          = <your_influx_db_name>   
-    power_field       = PV.Gesamtleistung
 ```
 
 This will create the following _measurements_ (akin tables) in the defined Influx database:
@@ -287,8 +353,6 @@ forecast_log | log table on data downloads from [forecast sources](#forecast-sou
 
 where `<model>` refers to one of the [irradiance](#convert-weather-data-to-irradation-data) models calculated
 
-`power_field` will be discussed in [Solcast Tuning](#solcast-tuning) below
-
 The `database` must pre-exist in Influx. If it does not, the following manual operations can create it:
 ```
 ~ $ influx
@@ -299,31 +363,22 @@ The `database` must pre-exist in Influx. If it does not, the following manual op
 ~ $
 ```
 
-### .csv File Storage
-Config sections `[DWD]` and `[PVSystem]` support an option `storeCSV = 1` to store output in .csv files at `storePath`.
-
-### Solcast Tuning
-**Depricated by SolCast**
-Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
-
-```
-[SolCast]
-    post = 1
-```
-in the configuration file. But of course, it requires that such performance data is available locally.
-
-The script assumes that performance data is available in the same Influx database as configured for forecast data storage. Saying
+#### Influx v2.x Storage
+Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
 ```
 [Influx]
-    database    = <your_influx_db_name>
-    power_field = PV.Gesamtleistung
+    influx_V2       = 1              # enable Influx 2.x support
+    token           = <your token>
+    org             = <your org>
+    # optionally, the entry database can be named bucket. If not existent, the database is used
+    # to identify what is called the bucket in Influx v2.x
+    # bucket        = <your_influx_bucket_name>
 ```
-assumes that `<your_influx_db_name>` contains a measurement (table) `PV` with a field `Gesamtleistung` which has regular recordings of the PV generated power.
 
-It is assumed that 
-* this field has at least a time resolution of 5 minutes or less
-* power is in W
-* Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
+#### .csv File Storage
+`storeCSV = 1` store output in .csv files at `storePath`. This is mainly for debugging. 
+
+SolCast can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
 
 ### Solaranzeige Integration
 This application is designed to run seamlessly alongside [solaranzeige](https://solaranzeige.de). Hence, if installed on the same host, the `[Influx]` configuration section discussed in previous section may very well look like this:
@@ -424,16 +479,63 @@ After downloading the script from Github, into a directory of your choosing (eg.
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-0 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
 ```
-which would run the script every hour. Replace `SolCastLight.py` with the `PVFirecast.py` to run the full script.
+which would run the script every 15min (recommended). 
++ 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
++ Replace `SolCastLight.py` with the `PVForecast.py` to run the full script.
 
 A great explanation of `cron` is [here](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
 
 **Note:** The script doesn't do much in terms of housekeeping (eg., limit size of SQLite database or `err.txt` file used above to redirect error messages).
 
 ## To Do
-* PV system modeling (using config section `[PVSystem]`) does nothing to model systems with panels in multiple orientations. The basic structure is prepared to handle this, but it is not implemented as of now.
+* more clever use of 50 allowed API calls/day for SolCast
+
+## Deprecated
+Following subjects have been deprecated by the data providers. They are still supported by `PVForecast` as some functionality still seems to work.
+
+### Solcast Tuning
+**Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
+
+```
+[SolCast]
+    post = 1
+```
+in the configuration file. But of course, it requires that such performance data is available locally.
+
+The script assumes that performance data is available in the same Influx database as configured for forecast data storage. Saying
+```
+[Influx]
+    database      = <your_influx_db_name>
+    power_field   = PV.Gesamtleistung
+    power_field_2 = PV.Leistung_Str_2
+```
+assumes that `<your_influx_db_name>` contains a measurement (table) `PV` with a field `Gesamtleistung` which has regular recordings of the PV generated power. 
+
+For split array configurations (allowed by SolCast since official deprecation of tuning), a secondary tuning field `power_field_2` can be defined. In posting, `power_field` will be associated with `resource_id` and `power_field_2` with `resource_id_2`. This still seems to work as of today (2021-03-21). See [Solcast Configuration](#solcast-configuration) on guidence for split array support.
+
+It is assumed that 
+* this field has at least a time resolution of 5 minutes or less
+* power is in W
+* Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
+
+**Influx 2.0** is not supported for SolCast posting (this would need an update in `influx.py` for procedure `getPostData`)
+
+
+## Version History
+v1.00.00    2021-02-06  initial public release
+
+v1.01.00    2021-03-28
++ SolCast:
+  - [SolCast](#solcast-configuration) default `interval` management to make optimal use of permitted 50 API calls/day
+  - [split array support](#split-array-system-configuration) for MOSMIX and OWM (SolCast supports two arrays only)
+- [Influx v2.x](#influx-v2x-storage) support
+- [storeCSV](#csv-file-storage) now enabled for all data sources
+- various bug fixes, documentation improvement
+
+## Acknowlegements
+Thanks to all who raised issues or helped in testing!
 
 ## Disclaimer
 The software pulls weather data from various weather sources. It is the users responsability to adhere to the use conditions of these sources. 

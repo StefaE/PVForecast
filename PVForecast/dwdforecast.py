@@ -31,6 +31,8 @@ class DWDForecast(Forecast):
         self._kml          = None                                                        # xml with wheather data as ElementTree
         self.kmlName       = None                                                        # used for .csv file name determination
         self.SQLTable      = 'dwd'                                                       # which SQL table name is this data stored to (see DBRepository.loadData())
+        self.storePath     = self.config['DWD'].get('storePath')
+
 
     def getForecast_DWD_L(self):                                                         # get forecast from DWD web page --> self.kml as XML elementtree
         """Get newest MOSMIX_L forecast (file for selected station); store file as .zip"""
@@ -52,10 +54,10 @@ class DWDForecast(Forecast):
             self._kml    = ET.fromstring(kml)
             kmlfile.close()
             if (self.config['DWD'].getboolean('storeKMZ')):
-                path   = self.config.get('DWD', 'storePath')
-                gzfile = gzip.open(path + '/' + self.kmlName + '.gz', 'wb')
+                gzfile   = gzip.open(self.storePath + '/' + self.kmlName + '.gz', 'wb')
                 gzfile.write(kml)
                 gzfile.close()
+            self.csvName = re.sub(r'\.kml$', '_weather.csv.gz', self.kmlName)
 
         except Exception as e:
             print ("getForecast_DWD_L: " + str(e))
@@ -66,7 +68,6 @@ class DWDForecast(Forecast):
         store extracted file as xxx_<station>.kml.gz"""
         
         url     = self.config.get('DWD', 'DWD_URL_S')
-        path    = self.config.get('DWD', 'storePath')
         station = self.config['DWD'].get('DWDStation')
         try:
             req      = requests.get(url)
@@ -78,14 +79,14 @@ class DWDForecast(Forecast):
             if (len(files) < 2):
                 raise Exception("ERROR --- Expected to find at least two file links at '" + url + "'")
             myRemote = files[len(files)-2]                                               # file to fetch from remote (last but one, as last is '_LATEST')
-            myLocal  = path + os.path.basename(myRemote)                                 # where to store downloaded file
+            myLocal  = self.storePath + os.path.basename(myRemote)                       # where to store downloaded file
             if (os.path.isfile(myLocal)):
                 print('Message - File ' + myLocal + ' already exists, not re-downloaded')
             else:
                 if not self.config['DWD'].getboolean('keepKMZ_S', False):                # delete local MOSMIX_S_* files
-                    for f in os.listdir(path):
+                    for f in os.listdir(self.storePath):
                         if re.search(r'^MOSMIX_S_', f):
-                            f_path = path + os.path.basename(f)
+                            f_path = self.storePath + os.path.basename(f)
                             if os.path.isfile(f_path):
                                 os.remove(f_path)
                 kmlName = os.path.basename(myLocal)
@@ -121,10 +122,11 @@ class DWDForecast(Forecast):
                 self._kml     = ET.fromstring(kml)
                 self.SQLTable = 'dwd_s'
 
+                kmlName = re.sub(r'\.kml', '_' + station + '.kml', kmlName)
+                self.csvName = re.sub(r'\.kml$', '_weather.csv.gz', kmlName)
                 if (self.config['DWD'].getboolean('storeKMZ')):
-                    kmlName = re.sub(r'\.kml', '_' + station + '.kml', kmlName)          # replace .kmz with .zip as more convenient extension
                     self.kmlName = kmlName
-                    kmlName = path + '/' + kmlName + '.gz'
+                    kmlName = self.storePath + '/' + kmlName + '.gz'
                     if (not os.path.isfile(kmlName)):                                    # don't over-write pre-existing file
                         gzfile = gzip.open(kmlName, 'wt')
                         gzfile.write(kml)
@@ -190,17 +192,3 @@ class DWDForecast(Forecast):
                 sys.exit(1)
 
         return(success)
-
-    def writeCSV(self):                                                                  # write self.DataTable to .csv file
-        """Write out weather data as .csv.gz file"""
-
-        try:
-            if (self.kmlName is None):
-                raise Exception("ERROR --- klmName not set")
-            path   = self.config['DWD'].get('storePath')
-            fName  = re.sub(r'\.kml$', '_weather.csv.gz', self.kmlName)
-            self.DataTable.to_csv(path + "/" + fName, compression='gzip')
-
-        except Exception as e:
-            print("writeCSV: " + str(e))
-            sys.exit(1)

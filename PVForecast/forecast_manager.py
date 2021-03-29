@@ -48,9 +48,9 @@ class ForecastManager:
             #--------------------------------------------------------------------------- PV Forecast handling
             myPV  = PVModel(self.config)
             model = self.config['DWD'].get('Irradiance')
-            myPV.run_allModels(myWeather, model)
-            if (self.config['PVSystem'].getboolean('storeCSV', 0)):                      # store PV simulations to .csv
-                myPV.writeCSV(myWeather.kmlName)
+            myPV.run_splitArray(myWeather, model)
+            if self.config['PVSystem'].getboolean('storeCSV', 0):                        # store PV simulations to .csv
+                myPV.writeCSV()
 
             #--------------------------------------------------------------------------- SQLite storage
             if (self.config['DWD'].getboolean('storeDB')):
@@ -59,6 +59,7 @@ class ForecastManager:
                 myDB.loadData(myPV)
                 del myDB                                                                 # force closure of DB
 
+            #--------------------------------------------------------------------------- Influx storage
             if (self.config['DWD'].getboolean('storeInflux')):
                 myInflux = InfluxRepo(self.config)
                 myInflux.loadData(myPV)
@@ -81,23 +82,26 @@ class ForecastManager:
     def processOpenWeather(self):
         storeDB     = self.config['OpenWeatherMap'].getboolean('storeDB')
         storeInflux = self.config['OpenWeatherMap'].getboolean('storeInflux')
-        if storeDB or storeInflux:                                                       # else there is no storage location ...    
-            myOpenWeather = OWMForecast(self.config)
-            myOpenWeather.getForecast_OWM()
-            if storeDB:     myDB     = DBRepository(self.config)
-            if storeInflux: myInflux = InfluxRepo(self.config)
-            if storeDB: last_issue   = myDB.getLastIssueTime(myOpenWeather.SQLTable)
-            else:       last_issue   = myInflux.getLastIssueTime(myOpenWeather.SQLTable)
-            issue_time = datetime.fromisoformat(myOpenWeather.IssueTime)
+        storeCSV    = self.config['OpenWeatherMap'].getboolean('storeCSV')
+        if storeDB or storeInflux or storeCSV:                                           # else there is no storage location ...    
+            myWeather = OWMForecast(self.config)
+            myWeather.getForecast_OWM()
+            if storeDB:     myDB       = DBRepository(self.config)
+            if storeInflux: myInflux   = InfluxRepo(self.config)
+            if storeDB:     last_issue = myDB.getLastIssueTime(myWeather.SQLTable)
+            else:           last_issue = myInflux.getLastIssueTime(myWeather.SQLTable)
+            issue_time = datetime.fromisoformat(myWeather.IssueTime)
             delta_t    = round((issue_time - last_issue).total_seconds()/60)             # elapsed time since last download
-            if (delta_t > 58):                                                           # hourly data, allow 2min slack
-                myPV      = PVModel(self.config)
+            force      = self.config['OpenWeatherMap'].getboolean('force', False)        # force download - for debugging
+            if delta_t > 58 or force:                                                    # hourly data, allow 2min slack
+                myPV   = PVModel(self.config)
 
                 model = self.config['OpenWeatherMap'].get('Irradiance')
-                myPV.run_allModels(myOpenWeather, model)
-                myOpenWeather.merge_PVSim(myPV)
-                if storeDB:     myDB.loadData(myOpenWeather)
-                if storeInflux: myInflux.loadData(myOpenWeather)
+                myPV.run_splitArray(myWeather, model)
+                myWeather.merge_PVSim(myPV)
+                if storeDB:     myDB.loadData(myWeather)
+                if storeInflux: myInflux.loadData(myWeather)
+                if storeCSV:    myWeather.writeCSV()
         else:
             print("Warning - getting OpenWeatherMap data not supported without database storage enabled (storeDB or storeInflux")
 
