@@ -240,7 +240,7 @@ class PVModel(Forecast):
                 models   = modelLst.split(",")
                 if model not in models:                                                   # request was for something else ...
                     return None
-        if weather.csvName is not None:
+        if hasattr(weather, 'csvName') and weather.csvName is not None:
             self.csvName = re.sub(r'weather', 'sim', weather.csvName)
 
         try:
