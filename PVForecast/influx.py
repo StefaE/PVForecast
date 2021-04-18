@@ -109,7 +109,7 @@ class InfluxRepo:
 
             meas, field = self.config['Influx'].get(power_field).split('.')
 
-            client      = InfluxDBClient(host='solaranzeige', port=self._port, database='solaranzeige', username=self._username, password=self._password)           # <===================================
+            client      = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)           # <===================================
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []
