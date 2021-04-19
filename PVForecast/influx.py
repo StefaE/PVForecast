@@ -25,6 +25,8 @@ class InfluxRepo:
         self._host      = self.config['Influx'].get('host', 'localhost')
         self._port      = self.config['Influx'].getint('port', 8086)
         self._database  = self.config['Influx'].get('database', None)
+        self._username  = self.config['Influx'].get('username', 'root')
+        self._password  = self.config['Influx'].get('password', 'root')
         self._token     = self.config['Influx'].get('token', None)
         self._org       = self.config['Influx'].get('org', None)
         self._influx_V2 = self.config['Influx'].getboolean('influx_v2', False)
@@ -54,7 +56,7 @@ class InfluxRepo:
             df_log    = pd.DataFrame(data={'IssueTime': issueTime, 'Table': [data.SQLTable]}, index=[now_utc])
 
             if not self._influx_V2:
-                client   = DataFrameClient(host=self._host, port=self._port, database=self._database)
+                client   = DataFrameClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
                 client.write_points(df, data.SQLTable)
                 client.write_points(df_log, 'forecast_log', tag_columns=['Table'])
             else:
@@ -68,7 +70,7 @@ class InfluxRepo:
     def getLastIssueTime(self, table):
         IssueTime = None
         if not self._influx_V2:
-            client = InfluxDBClient(host=self._host, port=self._port, database=self._database)
+            client = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
             select = client.query("""SELECT Last("IssueTime") AS "IssueTime" FROM "forecast_log" WHERE "Table"='""" + table + """'""")
             for row in select.get_points():
                 IssueTime = row['IssueTime']
@@ -107,7 +109,7 @@ class InfluxRepo:
 
             meas, field = self.config['Influx'].get(power_field).split('.')
 
-            client    = InfluxDBClient(host=self._host, port=self._port, database=self._database)
+            client      = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []

@@ -362,6 +362,7 @@ The `database` must pre-exist in Influx. If it does not, the following manual op
 > quit
 ~ $
 ```
+If authentication is required, optional `username` and `password` can be provided in the `[Influx]` config section. Default is `root` / `root` (as is the default for Influx 1.x). Authentication is *not* SSL encrypted though.
 
 #### Influx v2.x Storage
 Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
@@ -374,6 +375,8 @@ Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the c
     # to identify what is called the bucket in Influx v2.x
     # bucket        = <your_influx_bucket_name>
 ```
+
+Note that in Influx 2.x token based authentification is mandatory
 
 #### .csv File Storage
 `storeCSV = 1` store output in .csv files at `storePath`. This is mainly for debugging. 
@@ -533,6 +536,10 @@ v1.01.00    2021-03-28
 - [Influx v2.x](#influx-v2x-storage) support
 - [storeCSV](#csv-file-storage) now enabled for all data sources
 - various bug fixes, documentation improvement
+
+v1.02.00
++ [Influx 1.x](#influx-v1x-storage) now supports authentication
++ small bug fixes
 
 ## Acknowlegements
 Thanks to all who raised issues or helped in testing!

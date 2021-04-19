@@ -1,8 +1,11 @@
+import warnings
 import pvlib
 from pvlib.pvsystem    import PVSystem
 from pvlib.location    import Location
 from pvlib.modelchain  import ModelChain
-from pvlib.forecast    import ForecastModel
+with warnings.catch_warnings():
+    warnings.filterwarnings('ignore', category=UserWarning, message=r'.*highly experimental.*')
+    from pvlib.forecast    import ForecastModel
 from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 from pvlib             import irradiance
 
@@ -237,7 +240,7 @@ class PVModel(Forecast):
                 models   = modelLst.split(",")
                 if model not in models:                                                   # request was for something else ...
                     return None
-        if weather.csvName is not None:
+        if hasattr(weather, 'csvName') and weather.csvName is not None:
             self.csvName = re.sub(r'weather', 'sim', weather.csvName)
 
         try:
