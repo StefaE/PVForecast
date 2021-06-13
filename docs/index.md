@@ -50,7 +50,7 @@ As with any weather forecast, different providers sometimes diverge. OpenWeather
 
 ![MOSMIX_OWM](DWD_OWM.png)
 
-Hmm... what to believe?
+Hmm... what to believe? Forecasts are difficult, especially those about the future!
 
 ### Solcast
 
@@ -80,7 +80,7 @@ Comparing these forecasts with actuals, show that on this exceptional day, Solca
 
 ![Actuals Comparison](SolCast_Apr29.png)
 
-### Quantifyng forecast quality
+### Quantifying forecast quality
 
 The above discussion motivates a deeper look at forecast quality as a function of forecast horizon: Which forecast is most accurate for current day / next day / future days?
 
