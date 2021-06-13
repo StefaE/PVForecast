@@ -2,7 +2,7 @@
 Rooftop PV production forecast
  
 ## Introduction
-This project supports an extensive set of production forecasts for PV rooftop installations. Various weather [data sources](#forecast-sources), [PV modeling algorithms](#forecast-models) and [storage methods](#data-storage) for results can be used. Split array PV installations are supported.
+This project supports an extensive set of production forecasts for PV rooftop installations. Various weather [data sources](#forecast-sources), [PV modeling algorithms](#forecast-models) and [storage methods](#data-storage) for results can be used. Split array PV installations are supported. A more detailed functional overview is given [here](docs/README.md)
 
 The project has been developped on Python3 and runs on Raspberries and integrates with [solaranzeige](https://solaranzeige.de) (see [Solaranzeige Integration](#solaranzeige-integration))
 
@@ -61,7 +61,7 @@ A couple of more options can be configured, but are left out of this brief descr
   * [Disclaimer](#disclaimer)
   * [License](#license)
 
-Table of contents generated with [markdown-toc](http://ecotrust-canada.github.io/markdown-toc/)
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 -------------
 
@@ -75,6 +75,8 @@ The reminder of this `ReadMe` file is meant to describe the full script configur
 * out-commented `key = value` pairs show the respective default options, which could be changed as needed
 
 The `config.ini` file provided with the distribution contains a few site specific values, which cannot be pre-configured. The are shown as `<xx>`. This file should be read alongside the below text for best understanding.
+
+Note that all times throughout this project are in UTC.
 
 ### Forecast Sources
 ```
@@ -326,8 +328,6 @@ owm | OpenWeatherData weather fields and PV modeling output
 solcast | PV output power estimates
 
 All tables contain `IssueTime` (when forecast was issued) and `PeriodEnd` (end time of forecast period). Date from previous `IssueTime` are not deleted to allow analysis of accuracy of forecasts over different forecast horizons.
-
-All times are in UTC.
 
 Note that if the configuration file is changed on a running system, more or less data maybe calculated:
 * newly needed tables are created on-the-fly
