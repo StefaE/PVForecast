@@ -13,7 +13,7 @@ Script | Description
 `PVForecasts.py` | enables all functionality described in this `ReadMe`
 `SolCastLight.py` | can only use [Solcast](https://solcast.com/) forecasts but is significantly easier to install and configure
 
-A more detailed technical overview is provided [here](../README.md)
+A more detailed technical overview is provided [here](https://github.com/StefaE/PVForecast#readme)
 
 ----------- 
 ## Table of Content
