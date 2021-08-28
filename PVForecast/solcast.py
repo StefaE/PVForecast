@@ -36,7 +36,7 @@ class SolCast(Forecast):
         self._storeDB      = self.config['SolCast'].getboolean('storeDB', 0)             # ... store to DB
         self._storeInflux  = self.config['SolCast'].getboolean('storeInflux')            # ... store to Influx (one of the two must be true to make sense to get data from solcast)
         self._storeCSV     = self.config['SolCast'].getboolean('storeCSV')               # ... store to csv in storePath
-        self.storePath     = self.config['OpenWeatherMap'].get('storePath')
+        self.storePath     = self.config['SolCast'].get('storePath')
         self._force        = self.config['SolCast'].getboolean('force', False)           # force download - note that we are restricted in number of downloads/day
         self._apiCalls     = 50                                                          # max API calls per day
         if self._force:
@@ -103,7 +103,7 @@ class SolCast(Forecast):
             #pickle.dump(forecasts, myFile)
             #myFile.close()
             #
-            # myFile      = open('./temp/forecasts_demo_02', 'rb')                           # load dummy solcast forecast for debugging
+            # myFile      = open('./temp/forecasts_demo_02', 'rb')                       # load dummy solcast forecast for debugging
             # forecasts_1 = pickle.load(myFile)
             # forecasts_2 = forecasts_1
             # myFile.close()
@@ -124,7 +124,7 @@ class SolCast(Forecast):
                 for c in cols:
                     df[c]       = df[c + '_1'] + df[c + '_2']
             df.index.name       = 'PeriodEnd'
-            self.DataTable      = df*1000                                                # convert kWh to Wh
+            self.DataTable      = df*1000                                                # convert kW to W
             issueTime           = (self.DataTable.index[0] - period).to_pydatetime()
             now_utc             = datetime.now(timezone.utc)
             if (now_utc - issueTime).total_seconds()/60 > 8:                             # we are more than 8min late
