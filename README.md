@@ -9,6 +9,7 @@ The project has been developped on Python3 and runs on Raspberries and integrate
 Generally, functionality is configured through a configuration file (default: `.\config.ini`, `.\solcast_light_config.ini`, a different location can be provided with `-c` command line option)
 
 Two main scripts are provided:
+
 Script | Description
 -------|------------
 `PVForecasts.py` | enables all functionality described in this `ReadMe`
