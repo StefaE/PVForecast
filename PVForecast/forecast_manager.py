@@ -15,6 +15,7 @@ class ForecastManager:
     def __init__(self, configFile):
         try:
             config = configparser.ConfigParser(inline_comment_prefixes='#', empty_lines_in_values=False)
+            if not os.path.isfile(configFile): raise Exception ('File does not exist')
             config.read(configFile)
         except Exception as e:
             print("Error reading config file '" + configFile + "': " + str(e))

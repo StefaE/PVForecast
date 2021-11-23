@@ -14,6 +14,7 @@ if __name__ == "__main__":
 
     try:
         config = configparser.ConfigParser(inline_comment_prefixes='#', empty_lines_in_values=False)
+        if not os.path.isfile(cfgFile): raise Exception ('File does not exist')
         config.read(cfgFile)
     except Exception as e:
         print("Error reading config file '" + cfgFile + "': " + str(e))
