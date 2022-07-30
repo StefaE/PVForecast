@@ -6,7 +6,7 @@ filename: README
 --- 
 
 # PVForecast User's Guide
-A high level introduction to the project is given [here](index)
+A high level introduction to the project is given [here](https://stefae.github.io/PVForecast/)
  
 ## Introduction
 The user has to make one upfront decision: Which version to install? Two flavors exist:
