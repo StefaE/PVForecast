@@ -1,11 +1,9 @@
-<!---
 ---
 title: Users Guide
 layout: template
 order: 2
 filename: README
 ---
---->
 
 # PVForecast User's Guide
 A high level introduction to the project is given [here](https://stefae.github.io/PVForecast/)
