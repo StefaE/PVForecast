@@ -1,3 +1,25 @@
+"""
+Copyright (C) 2022    Stefan Eichenberger   se_misc ... hotmail.com
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+This is the main script to run a simulation of PVControl for one or multiple days. 
+This script is typically called interactively on a performant machine. By default, 
+config.ini in the local directory is the configuration file. But argument -c can
+specify a different file.
+"""
+
 import requests
 import os
 import xml.etree.ElementTree as ET
@@ -53,11 +75,11 @@ class DWDForecast(Forecast):
             kml          = kmlfile.read()                                                # xml source as a string
             self._kml    = ET.fromstring(kml)
             kmlfile.close()
-            if (self.config['DWD'].getboolean('storeKMZ')):
+            if (self.config['DWD'].getboolean('storeKMZ', False)):
                 gzfile   = gzip.open(self.storePath + '/' + self.kmlName + '.gz', 'wb')
                 gzfile.write(kml)
                 gzfile.close()
-            self.csvName = re.sub(r'\.kml$', '_weather.csv.gz', self.kmlName)
+            self.csvName = re.sub(r'\.kml$', '.csv.gz', self.kmlName)
 
         except Exception as e:
             print ("getForecast_DWD_L: " + str(e))
@@ -123,8 +145,8 @@ class DWDForecast(Forecast):
                 self.SQLTable = 'dwd_s'
 
                 kmlName = re.sub(r'\.kml', '_' + station + '.kml', kmlName)
-                self.csvName = re.sub(r'\.kml$', '_weather.csv.gz', kmlName)
-                if (self.config['DWD'].getboolean('storeKMZ')):
+                self.csvName = re.sub(r'\.kml$', '.csv.gz', kmlName)
+                if (self.config['DWD'].getboolean('storeKMZ', False)):
                     self.kmlName = kmlName
                     kmlName = self.storePath + '/' + kmlName + '.gz'
                     if (not os.path.isfile(kmlName)):                                    # don't over-write pre-existing file
@@ -157,6 +179,9 @@ class DWDForecast(Forecast):
             else:
                 raise Exception("ERROR --- unknown file type for weather file " + file)
             self.kmlName  = re.sub(r'\.(zip|kml\.gz|kmz|xml)$', '.kml', file, re.IGNORECASE)
+            self.kmlName = os.path.basename(self.kmlName)
+            self.csvName = re.sub(r'\.kml$', '.csv.gz', self.kmlName)
+            return()
 
         except Exception as e:
             print ("readKML: " + str(e))
@@ -192,3 +217,24 @@ class DWDForecast(Forecast):
                 sys.exit(1)
 
         return(success)
+
+    def convertDT(self):
+        dropWeather = self.config['DWD'].getboolean('dropWeather', True)
+        if dropWeather:
+            drop    = []
+            for field in list(self.DataTable):
+                if field not in ['TTT', 'Td', 'PPPP', 'FF', 'Neff', 'Rad1h', 'RRad1']: 
+                    drop.append(field)
+            self.DataTable.drop(drop, axis=1, inplace=True)                              # drop columns which are either not useful or non-float
+        self.DataTable.rename(columns = {'TTT'  : 'temp_air', 
+                                         'Td'   : 'temp_dew',
+                                         'PPPP' : 'pressure',
+                                         'FF'   : 'wind_speed',
+                                         'Neff' : 'clouds'}, inplace=True)
+        if 'Rad1h' in self.DataTable:
+            self.DataTable.rename(columns = {'Rad1h': 'ghi'}, inplace=True)
+            self.DataTable['ghi'] = self.DataTable['ghi'] * 0.2777778                # convert to Rad1h [kJ/m^2] to Wh/m^2
+        if 'RRad1' in self.DataTable:
+            self.DataTable.rename(columns = {'RRad1': 'kt'}, inplace=True)
+            self.DataTable['kt'] = self.DataTable['kt']/100                          # convert to RRad1 to kt (/100)
+        return()

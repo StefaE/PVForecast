@@ -1,16 +1,39 @@
+"""
+Copyright (C) 2022    Stefan Eichenberger   se_misc ... hotmail.com
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+This is the main script to run a simulation of PVControl for one or multiple days. 
+This script is typically called interactively on a performant machine. By default, 
+config.ini in the local directory is the configuration file. But argument -c can
+specify a different file.
+"""
+
 from datetime import datetime, timezone
 import requests
 import sys
 
 import pandas as pd
 import numpy  as np
+from pandas.api.types import is_numeric_dtype
 
 from .forecast import Forecast
 
 class OWMForecast(Forecast):
     """Class for downloading weather data from openweathermap.org"""
     def __init__(self, config):
-        """Initialize DWDForecast
+        """Initialize OWMForecast
         config      configparser object with section [OpenWeatherMap]"""
 
         super().__init__()
@@ -26,22 +49,22 @@ class OWMForecast(Forecast):
             url = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + latitude + '&lon=' + longitude + '&exclude=minutely,daily,alerts&appid=' + apikey
             req = requests.get(url)
             if (req.reason != 'OK'):
-                raise Exception("ERROR --- Can't fetch OpenWeatherMap data from '" + url + "' --- Reason: " + req.reason)
-            df                = pd.DataFrame(req.json()['hourly'])
-            df_idx            = pd.to_datetime(df['dt'], unit='s', utc=True)
-            df                = df.set_index(df_idx)
-            df.index.name     = 'PeriodEnd'
-            drop              = []
-            for field in ['dt', 'weather', 'rain', 'snow', 'wind_gust']:
-                if field in df: drop.append(field)
-            self.DataTable    = df.drop(drop, axis=1)                                    # drop columns which are either not useful or non-float
-            self.IssueTime    = str(datetime.fromtimestamp(req.json()['current']['dt'], timezone.utc))
-            self.csvName      = 'owm_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
+                raise Exception("getForecast_OWM: Can't fetch OpenWeatherMap data from '" + url + "' --- Reason: " + req.reason)
+            self.DataTable     = pd.DataFrame(req.json()['hourly'])
+            df_idx             = pd.to_datetime(self.DataTable['dt'], unit='s', utc=True)
+            self.DataTable.set_index(df_idx, inplace=True)
+            self.DataTable.index.name = 'PeriodEnd'
+            drop               = ['dt']
+            dropWeather        = self.config['OpenWeatherMap'].getboolean('dropWeather', True)
+            for field in list(self.DataTable):
+                if (field not in ['temp', 'wind_speed', 'pressure', 'dew_point', 'clouds']) and \
+                    (dropWeather or not is_numeric_dtype(self.DataTable[field])): 
+                        drop.append(field)
+            self.DataTable.drop(drop, axis=1, inplace=True)                              # drop columns which are either not useful or non-float
+            self.DataTable.rename(columns = {'temp': 'temp_air', 'dew_point': 'temp_dew'}, inplace=True)
+            self.IssueTime     = str(datetime.fromtimestamp(req.json()['current']['dt'], timezone.utc))
+            self.csvName       = 'owm_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
 
         except Exception as e:
             print("getForecast_OWM: " + str(e))
             sys.exit(1)
-
-    def merge_PVSim(self, PV: Forecast):
-        self.DataTable    = pd.concat([self.DataTable, PV.DataTable], axis=1)
-        self.InfluxFields = PV.InfluxFields
