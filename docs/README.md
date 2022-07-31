@@ -18,7 +18,7 @@ Script | Description | Config File
 
 An upgrade from the light to the full version is possible at any time, just requiring the execution of the additional installation steps.
 
-<span style="color:red">Upgrade Notice:</span> 
+<span style="color:red"><b>Upgrade Notice:</b></span> 
 v2.0 contains some incompatible changes (for the **full version** only) - see [Version History](#version-history). For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
 
 
