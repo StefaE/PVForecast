@@ -50,7 +50,7 @@ PV performance forecasts can be done from traditional weather data (supported pr
 
 They may provide solar radiation data (GHI) or just cloud data. Both can be used to generate a PV power forecast. The following picture shows the result - for a particularly bad day, April 29, 2021:
 
-![Others](pictures/Others_April29.png)
+<img src="pictures/Others_April29.png">
 
 For this to work, we first need have radiation data (GHI). In case we are based on cloud coverage, we estimate GHI from cloud coverage. Then, **GHI** (global horizontal irradiation, the solar power (in W) falling on a flat surface of 1m<sup>2</sup>) is decomposed into **DNI** (direct normal radiation - the part of energy falling on the same surface due to direct illumination by the sun) and **DHI** (diffuse horizontal irradiation - the part of energy falling on the same surface due to diffuse illumination, eg. due to reflection in clouds, etc.: the reason why it isn't pitch-blak in shadows ...).
 
@@ -58,15 +58,17 @@ Various models can be to estimate DNI from GHI and then DHI follows fundamental 
 
 The most common model to estimate GHI from cloud coverage is `clearsky_scaling` and the most common model to estimate DNI from GHI is `disc`. But the software described here supports a number of other [Irradiation models](./README#convert-weather-data-to-irradation-data). This is possible thanks to the extensive [pvlib](https://pvlib-python.readthedocs.io/en/stable/) library.
 
-[![](./pictures/pvlib_powered_logo_horiz.png)](https://pvlib-python.readthedocs.io/en/stable/)
+<a href="ttps://pvlib-python.readthedocs.io/en/stable/">
+   <img src="ictures/pvlib_powered_logo_horiz.png">
+</a>
 
 In the following picture, we use GHI (`Rad1h` in their lingo) from DWD/MOSMIX and calculate PV output power with `disc`. As GHI data is not available for all stations, `clearsky_scaling` uses cloud coverage data from DWD/MOSMIX. Both are reasonably closely related to each other:
 
-![MOSMIX](./pictures/Disc_vs_Cloud.png)
+<img src="pictures/Disc_vs_Cloud.png">
 
 As with any weather forecast, different providers sometimes diverge. OpenWeatherMap only provides cloud coverage, so - for fairness - we should only compare this with cloud-based forcasts from DWD:
 
-![MOSMIX_OWM](./pictures/DWD_OWM.png)
+<img src="pictures/DWD_OWM.png">
 
 Hmm... what to believe? Forecasts are difficult, especially those about the future! A chapter will be added here in the not too distant future, comparing one year of forecast data with actual production.
 
@@ -77,7 +79,7 @@ For the example of Solcast, we'll investigate a bit how forecasts evolve over di
 
 Hence, if we look at eg. April 29th, we get the following picture. The concept described here is identical for other forecast providers, although forecast updates are much rarer (hourly, six-hourly)
 
-![Forecast Development](./pictures/SolCast_Apr29_Development.png)
+<img src="pictures/SolCast_Apr29_Development.png">
 
 Forecasts from the preceding days (April 23rd .. April 28th) are updated about once a day (greenish) and as accurate as other weather forecasts. However, on the current day (April 29th), forecasts are updated every 15min (blueish).
 
@@ -87,7 +89,7 @@ Hence, for this particular day, long term forecasts from previous days were far 
 
 Comparing these forecasts with actuals, show that on this exceptional day, Solcast was still overly optimistic betweeen 8:00 and 12:00 and actuals were even outside the confidence interval of earlier forecasts.
 
-![Actuals Comparison](./pictures/SolCast_Apr29.png)
+<img src="pictures/SolCast_Apr29.png">
 
 Generally speaking, **SolCast** and **VisualCrossing** update their forecasts aggressively over time. **MOSMIX** does not significantly change forecasts once issued.
 
