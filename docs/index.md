@@ -40,7 +40,7 @@ See the [Users Guide](README) for a full description of installation and configu
 
 The following shows forecast and actual data for a week in early May 2021:
 
-![Solcast 8 Days](pictures/SolCast_8days.png)
+<img src="pictures/SolCast_8days.png">
 
 For comparison reasons, also DWD (MOSMIX = `disc`) is shown. It seems obvious that SolCast does overall a much better job. It also provides a confidence interval (p10, p90) for its forecasts. We should hence expect that for any 30min interval, actual PV output is in 80% of cases between these bounds.
 
