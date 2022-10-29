@@ -50,7 +50,7 @@ PV performance forecasts can be done from traditional weather data (supported pr
 
 They may provide solar radiation data (GHI) or just cloud data. Both can be used to generate a PV power forecast. The following picture shows the result - for a particularly bad day, April 29, 2021:
 
-![Others](./pictures/Others_April29.png)
+![Others](pictures/Others_April29.png)
 
 For this to work, we first need have radiation data (GHI). In case we are based on cloud coverage, we estimate GHI from cloud coverage. Then, **GHI** (global horizontal irradiation, the solar power (in W) falling on a flat surface of 1m<sup>2</sup>) is decomposed into **DNI** (direct normal radiation - the part of energy falling on the same surface due to direct illumination by the sun) and **DHI** (diffuse horizontal irradiation - the part of energy falling on the same surface due to diffuse illumination, eg. due to reflection in clouds, etc.: the reason why it isn't pitch-blak in shadows ...).
 
