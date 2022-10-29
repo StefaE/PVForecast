@@ -125,7 +125,7 @@ Depending on the data source, various forecast algorithms are available. The con
     # Longitude       =  8.7
 ```
 
-[Solcast](https://solcast.com/pricing/) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
+[Solcast](https://solcast.com/tools/free-rooftop-solar-forecasting) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
