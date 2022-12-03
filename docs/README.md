@@ -123,9 +123,10 @@ Depending on the data source, various forecast algorithms are available. The con
     # interval        =  0        # interval at which SolCast is read (during daylight only)
     # Latitude        = 50.2      # defaults describe Frankfurt, Germany
     # Longitude       =  8.7
+    # hours           = 168       # defaults to 7 days if pysolcast v1.0.12 is installed
 ```
 
-[Solcast](https://solcast.com/tools/free-rooftop-solar-forecasting) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
+[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
 
 Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
 
@@ -142,7 +143,9 @@ number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not cal
 
 There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [below](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
 
-Purpose of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated) is to know sunrise and sunset times. Defaults are for Frankfurt, Germany.
+Purpose of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated) is to know sunrise and sunset times. Defaults are for Frankfurt, Germany. (SolCast has it's own location information, associated with the `api_key`.)
+
+`hours` defines the forecast period and defaults to 168h (if `pysolcast` v1.0.12 is [used](#minimal-requirements), else to 48h as default of the SolCast web service)
 
 ### _VisualCrossing_ Configuration
 ```
@@ -503,6 +506,10 @@ sudo pip3 install pysolcast                  # enables access to SolCast
 sudo pip3 install astral                     # provides sunrise, sunset
 sudo pip3 install influxdb                   # provides access to InfluxDB
 ```
+**Note** Since approx. November 2022, SolCast defaults to 48h forecast period only. This can be [increased](#solcast-configuration) up to 14 days (336 hours), but requires `pysolcast` in v1.0.12 or newer. Unfortunatly, by default, `pysolcast` requests Python 3.9. If you are running an older version of Python, you can work around this with
+```
+sudo pip3 install pysolcast==1.0.12 --ignore-requires-python
+```
 
 With this we are able to run `SolCastLight.py`, which is limited to supporting Solcast as the only [forecast source](#forecast-sources)
 
@@ -606,6 +613,10 @@ It is assumed that
 **Note, July 2022**: It appears that SolCast is still willing to receive data and appears to somehow react on it.
 
 ## Version History
+**v2.01.00**    2022-12-03
++ solves [issue #14](https://github.com/StefaE/PVForecast/issues/14): [SolCast](#solcast-configuration) defaults to 48h, but accepts an `hours` parameter.
++ Upgrade notice: for this to work, `pysolcast` version needs be v1.0.2 or higher; see [requirements](#minimal-requirements)
+
 **v2.00.00**    2022-07-24
 + added [VisualCrossing](#visualcrossing-configuration) as new forecast source
 + added [File Input](#fileinput-configuration) as new forecast source, to simplify debugging

@@ -112,10 +112,11 @@ class SolCast(Forecast):
 
     def getSolCast(self):
         if (self._doDownload()):
+            hours = self.config['SolCast'].getint('Hours', 168)                          # requires update of pysolcast
             try:
-                forecasts_1 = self._site.get_forecasts_parsed()
+                forecasts_1 = self._getSolCast(self._site, {'hours':hours})
                 if self._site_2 is not None: 
-                    forecasts_2 = self._site_2.get_forecasts_parsed()
+                    forecasts_2 = self._getSolCast(self._site_2, {'hours':hours})
             except Exception as e:
                 print ("getSolCast: " + str(e))
                 sys.exit(1)
@@ -186,3 +187,11 @@ class SolCast(Forecast):
             if self._storeCSV:
                 self.csvName  = 'solcast_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
                 self.writeCSV()
+
+    def _getSolCast(self, _site, hours):                                                 # pysolcast < 1.0.12 does not accept parameters hours
+        result = None
+        try:
+            result = _site.get_forecasts_parsed(hours)
+        except Exception:
+            result = _site.get_forecasts_parsed()
+        return result
