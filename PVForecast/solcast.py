@@ -99,7 +99,7 @@ class SolCast(Forecast):
                         have     = int(have/2)                                           # split-arrays need two calls per download
                     need         = int(int(day_period+1)/optimal)+1                      # number of 'optimal' minute intervals between sunrise and sunset
                     long         = need - have                                                                         # number of times where we can only call at longer intervals
-                    if   self._interval ==  0 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal:
+                    if   self._interval ==  0 and ((now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal):
                         interval = optimal*2
                     elif self._interval == -1 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal*2:    # focus on late,  neglect early
                         interval = optimal*2
