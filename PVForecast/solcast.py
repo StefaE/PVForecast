@@ -51,9 +51,11 @@ class SolCast(Forecast):
         try:
             self._interval = int(interval)
         except:
-            if interval   == 'late':  self._interval = -1                                # call often late,  at cost of neglecting early
-            elif interval == 'early': self._interval = -2                                # call often early, at cost of neglecting late
-            else:                     self._interval =  0                                # call often over mid-day
+            if interval   == 'late':   self._interval = -1                               # call often late,  at cost of neglecting early
+            elif interval == 'early':  self._interval = -2                               # call often early, at cost of neglecting late
+            elif interval == 'allday': self._interval = -3                               # call all day,     during night 4 times less
+            else:                      self._interval =  0                               # call often over mid-day
+        self._night_factor = 4                                                           # During night call APIs 4 times less
         self._db           = None                                                        # DBRepository object once DB is opened
         self._storeDB      = self.config['SolCast'].getboolean('storeDB', 0)             # ... store to DB
         self._storeInflux  = self.config['SolCast'].getboolean('storeInflux')            # ... store to Influx (one of the two must be true to make sense to get data from solcast)
@@ -73,7 +75,9 @@ class SolCast(Forecast):
         now_utc        = datetime.now(timezone.utc)
         mySun          = sun(location.observer, date=now_utc)
         retVal         = False
-        if self._force or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
+        in_day         = (now_utc > mySun['sunrise'] and now_utc < mySun['sunset'])
+
+        if self._force or in_day or self._interval == -3:                                # storeDB enabled, SolCast enabled, daylight
             if self._storeDB or self._storeInflux:
                 if self._storeDB:
                     self._db        = DBRepository(self.config)
@@ -89,10 +93,11 @@ class SolCast(Forecast):
                 else:                                                                    # self._interval = 0: Choose optimal interval
                     optimal      = 15                                                    # optimal interval for single site / dual site setup
                     have         = self._apiCalls - 1                                    # keep one API call as reserve
+                    day_period   = (mySun['sunset'] - mySun['sunrise']).total_seconds()/60
                     if self._site_2 is not None:
                         optimal  = optimal*2
                         have     = int(have/2)                                           # split-arrays need two calls per download
-                    need         = int((int((mySun['sunset'] - mySun['sunrise']).total_seconds()/60)+1)/optimal)+1     # number of 'optimal' minute intervals between sunrise and sunset
+                    need         = int(int(day_period+1)/optimal)+1                      # number of 'optimal' minute intervals between sunrise and sunset
                     long         = need - have                                                                         # number of times where we can only call at longer intervals
                     if   self._interval ==  0 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal:
                         interval = optimal*2
@@ -100,6 +105,11 @@ class SolCast(Forecast):
                         interval = optimal*2
                     elif self._interval == -2 and (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal*2:     # focus on early, neglect late
                         interval = optimal*2
+                    elif self._interval == -3:
+                        night_period = 1440 - day_period
+                        interval = (night_period / self._night_factor + day_period) / have
+                        if not in_day:
+                            interval *= self._night_factor
                     else:
                         interval = optimal
                     if delta_t > interval - 2:
