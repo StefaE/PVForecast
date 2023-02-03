@@ -1,0 +1,6 @@
+astral
+beautifulsoup4
+elementpath
+influxdb
+pvlib
+pysolcast
