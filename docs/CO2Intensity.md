@@ -24,9 +24,6 @@ Forecast the CO2 footprint of grid power and time heavy consumers to periods wit
   - [A possible strategy to use this data](#a-possible-strategy-to-use-this-data)
   - [Further references](#further-references)
 
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
-
-
 -----------
 
 ## What problem are we trying to solve?
