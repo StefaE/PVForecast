@@ -13,11 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 from datetime import datetime, timezone

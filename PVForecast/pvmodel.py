@@ -1,10 +1,10 @@
 """
 Copyright (C) 2022    Stefan Eichenberger   se_misc ... hotmail.com
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+This file is part of the PVOptimize and PVForecast project: you can 
+redistribute it and/or modify it under the terms of the GNU General 
+Public License as published by the Free Software Foundation, either 
+version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,23 +13,26 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 import warnings
-import pvlib
-from pvlib.pvsystem    import PVSystem
-from pvlib.location    import Location
-from pvlib.modelchain  import ModelChain
-with warnings.catch_warnings():
-    warnings.filterwarnings('ignore', category=UserWarning, message=r'.*highly experimental.*')
-    from pvlib.forecast    import ForecastModel
-from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
-from pvlib             import irradiance
+_pvlib_installed = True
+try:
+    import pvlib
+    from pvlib.pvsystem    import PVSystem
+    from pvlib.location    import Location
+    from pvlib.modelchain  import ModelChain
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning, message=r'.*highly experimental.*')
+        from pvlib.forecast    import ForecastModel
+    from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
+    from pvlib             import irradiance
+    if pvlib.__version__ < '0.9.0':
+        _pvlib_installed = False                                                         # we need at least 0.9.0
+    pass
+except:
+    _pvlib_installed = False
+    pass
 
 import pandas as pd
 import numpy  as np
@@ -40,6 +43,7 @@ from .forecast    import Forecast
 
 class PVModel(Forecast):
     """Model PV output based on irradiance or cloud coverage data"""
+    __operational__ = _pvlib_installed
 
     def __init__(self, config, section = 'PVSystem'):
         """Initialize PVModel
@@ -48,10 +52,11 @@ class PVModel(Forecast):
 
         try:
             self._pvversion = pvlib.__version__
-            if self._pvversion > '0.8.1':
-                print("Warning --- pvmodel not tested with pvlib > 0.8.1")
-            elif self._pvversion < '0.8.0':
-                raise Exception("ERROR --- require pvlib >= 0.8.1")
+            if self._pvversion > '0.9.4':
+                print("Warning --- pvmodel not tested with pvlib > 0.9.4")
+            elif self._pvversion < '0.9.0':
+                sys.tracebacklimit=0
+                raise Exception("ERROR --- require pvlib >= 0.9.0")
             super().__init__()
             self.config = config
             self._cfg   = section
@@ -60,12 +65,10 @@ class PVModel(Forecast):
             self.config['DEFAULT']['TemperatureModel']   = 'open_rack_glass_glass'       # https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.temperature.sapm_cell.html
             self.config['DEFAULT']['clearsky_model']     = 'simplified_solis'            # default clearsky model
             self.config['DEFAULT']['Altitude']           = '0'                           # default altitude sea level
-            self.config['DEFAULT']['Model']              = 'CEC'                         # default PV modeling stratey
+            self.config['DEFAULT']['Model']              = 'PVWatts'                     # default PV modeling stratey
             if section != 'PVSystem':
                 for item in list(self.config.items('PVSystem')):                         # copy 'PVSystem' into default, so that it serves as fallback for 'PVSystem_i' (split-arrays)
                     self.config['DEFAULT'][item[0]] = item[1]
-
-            self._allow_experimental     = self.config[self._cfg].getboolean('experimental', False)   # needs modification of pvlib.irradiance.erbs()
 
             self._location = Location(latitude  = self.config[self._cfg].getfloat('Latitude'),
                                       longitude = self.config[self._cfg].getfloat('Longitude'), 
@@ -120,7 +123,7 @@ class PVModel(Forecast):
                                  'eta_inv_nom'  : self.config[self._cfg].getfloat('NominalEfficiency') }
             pvwatts_losses   = { 'soiling'    : 0,   'shading': 0, 'snow':            0, 'mismatch': 0, 'wiring':       2, 
                                  'connections': 0.5, 'lid'    : 0, 'nameplate_rating':0, 'age':      0, 'availability': 0 }
-            tempModel        = self.config.get(self._cfg, 'TemperatureModel')
+            tempModel        = self.config[self._cfg].get('TemperatureModel')
             self._pvsystem   = PVSystem(surface_tilt                 = self.config[self._cfg].getfloat('Tilt'),
                                         surface_azimuth              = self.config[self._cfg].getfloat('Azimuth'),
                                         module_parameters            = pvwatts_module,
@@ -145,13 +148,10 @@ class PVModel(Forecast):
                                 'pressure'             : [Pa]
                             For irradiation based models:
                                 'ghi'                  : W/m2
-                                'kt'                   : 0 .. 1 [%] for experimental model 'erbs_kt' only
                             For cloud based models 'campbell_norman' and 'clearsky_scaling':
                                 'clouds'               : 0 .. 100 [%]
 
         model               one of: 'disc', 'dirint', 'dirindex', 'erbs'     (GHI decomposition models)
-                                    'erbs_kt'                                (as 'erbs', but with kt as input parameter; this needs a minor
-                                                                              modification to pvlib.irradiance.erbs)
                                     'campbell_norman', 'clearsky_scaling'    (cloud coverage to irradiance)
                                     'clearsky'                               (clear sky model)
         cloud_cover_param   name of cloud cover parameter in weather"""
@@ -166,6 +166,7 @@ class PVModel(Forecast):
                 weatherData    = weather 
             if (model not in ['clearsky', 'clearsky_scaling', 'campbell_norman']):       # we don't need this for cloud models ...
                 if 'ghi' not in weatherData:
+                    sys.tracebacklimit=0
                     raise Exception('ERROR --- weather does not include irradiation data, use cloud based models instead of = ' + model)
                 ghi      = np.array(weatherData['ghi'])
                 solar_position = self._location.get_solarposition(times       = weatherData.index,
@@ -196,20 +197,10 @@ class PVModel(Forecast):
                                                      pressure     = weatherData['pressure'],
                                                      temp_dew     = weatherData['temp_dew'] - 273.15)
                 dhi = ghi - dni*cosSZA
-            elif (model == 'erbs' or model == 'erbs_kt'):
-                if (model == 'erbs'):
-                    erbs = pvlib.irradiance.erbs(ghi             = ghi,                  # returns dataframe with columns ['dni', 'dhi', 'kt']
-                                                 zenith          = solar_position['zenith'],
-                                                 datetime_or_doy = weatherData.index)
-                else:                                                                    # 'erbs_kt', needs modification in pvlib.irradiance.erbs
-                    try:
-                        erbs = pvlib.irradiance.erbs(ghi             = ghi,              # returns dataframe with columns ['dni', 'dhi', 'kt']
-                                                     zenith          = solar_position['zenith'],
-                                                     datetime_or_doy = weatherData.index,
-                                                     kt              = weatherData['kt']) # = kt, in range 0 .. 100
-                    except Exception as e:
-                        print("getIrradiance: ERROR --- erbs_kt needs modification to pvlib.irradiance.erbs()")
-                        sys.exit(1)
+            elif (model == 'erbs'):
+                erbs = pvlib.irradiance.erbs(ghi             = ghi,                  # returns dataframe with columns ['dni', 'dhi', 'kt']
+                                             zenith          = solar_position['zenith'],
+                                             datetime_or_doy = weatherData.index)
                 dni  = np.array(erbs['dni'])
                 dhi  = np.array(erbs['dhi'])
                 kt   = np.array(erbs['kt'])
@@ -218,12 +209,11 @@ class PVModel(Forecast):
                 self.irradiance = self._location.get_clearsky(weatherData.index,         # calculate clearsky ghi, dni, dhi for clearsky
                                                               model=clearsky_model)
             elif (model == 'clearsky_scaling' or model == 'campbell_norman'):
-                if model == 'campbell_norman' and self._pvversion == '0.8.0':
-                    raise Exception("ERROR --- cloud based irradiance model 'campbell_norman' only supported in pvlib 0.8.1 and higher")
                 fcModel = ForecastModel('dummy', 'dummy', 'dummy')                       # only needed to call methods below
                 fcModel.set_location(latitude=self._location.latitude, longitude=self._location.longitude, tz=self._location.tz)
                 self.irradiance = fcModel.cloud_cover_to_irradiance(weatherData['clouds'], how = model)
             else:
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- incorrect irradiance model called: " + model)
         except Exception as e:
             print("getIrradiance: " + str(e))
@@ -262,9 +252,9 @@ class PVModel(Forecast):
             if 'kt' in self.irradiance: 
                 cols.append('kt')
             if (self.pv_model == 'PVWatts'):
-                self.DataTable = pd.concat([self._mc.dc, self._mc.ac, self.irradiance[cols]], axis=1)
+                self.DataTable = pd.concat([self._mc.results.dc, self._mc.results.ac, self.irradiance[cols]], axis=1)
             else:                                                                        # CEC
-                self.DataTable = pd.concat([self._mc.dc.p_mp, self._mc.ac, self.irradiance[cols]], axis=1)
+                self.DataTable = pd.concat([self._mc.results.dc.p_mp, self._mc.results.ac, self.irradiance[cols]], axis=1)
             m                  = self.irradiance_model
             if (m == 'disc' or m == 'erbs'):
                 self.DataTable.columns = ['dc_' + m, 'ac_' + m, 'ghi_' + m, 'dni_' + m, 'dhi_' + m, 'kt_' + m]
@@ -289,25 +279,22 @@ class PVModel(Forecast):
             dfList.append(self.runModel(weather, 'dirint',   modelLst))
             dfList.append(self.runModel(weather, 'dirindex', modelLst))
             dfList.append(self.runModel(weather, 'erbs',     modelLst))
-            if 'kt' in weather.DataTable and self._allow_experimental:
-                dfList.append(self.runModel(weather, 'erbs_kt', modelLst))
         if 'clouds' in weather.DataTable:
             dfList.append(self.runModel(weather, 'clearsky_scaling', modelLst))          # ---- cloud based models
-            if self._pvversion >= '0.8.1':                                               # deprecated model 'liujordan' not implemented
-                dfList.append(self.runModel(weather, 'campbell_norman', modelLst))
+            dfList.append(self.runModel(weather, 'campbell_norman', modelLst))
         dfList.append(self.runModel(weather, 'clearsky', modelLst))
-        dfList.append(self._mc.solar_position.zenith)                                    # ---- add solar position
+        dfList.append(self._mc.results.solar_position.zenith)                            # ---- add solar position
         self.DataTable = pd.concat(dfList, axis=1)
         drop           = []
         for col in self.DataTable:
             if 'ghi' in col and not (col.startswith('ghi_clearsky') or col.startswith('ghi_campbell')):
                 drop.append(col)                                                         # ghi is input and available from weather data section in output
-            elif col == 'kt_erbs_kt': drop.append(col)                                   # redundant as kt is input to (experimental) erbs_kt
         if (len(drop) > 0): self.DataTable = self.DataTable.drop(drop, axis=1)
         
     def run_splitArray(self, weather: Forecast, modelLst = 'all'):
         try:
             if self._cfg != 'PVSystem':
+                sys.tracebacklimit=0
                 raise Exception ("ERROR --- run_splitArray can only be called on lead array 'PVSystem', not " + self._cfg)
             self.run_allModels(weather, modelLst)
             pat       = re.compile('^PVSystem_')

@@ -1,0 +1,34 @@
+# following libraries are required and trivial to install
+#    older versions of pandas might work, but have not been tested.
+#    older versions of other libraries are known to create problems
+requests
+pyyaml
+astral
+beautifulsoup4>=4.11.0
+elementpath>=2.1.0
+pysolcast>=1.0.12
+pandas>=1.4.0
+
+# for Influx storage: Both libraries can be installed simultaneously, but on any host,
+# it is recommended that only one Influx version is used.
+#
+#    if Influx <= 1.8 is used
+influxdb
+#    if Influx >= 2.0 is used
+influxdb_client
+
+# following libraries are - depending on OS - more difficult to install. That's why
+# they "protected": If they are not present, the application behaves gracefully:
+# It issues warnings and tries to maintain as much functionality as possible.
+#    scipy is used both by CO2 forecasting thorugh entso-e and pvlib
+#    simple CO2 forecasting is however possible without scipy
+entsoe-py>=0.5.9
+scipy>=1.4.0
+
+# following libraries are required for pvlib. They would be installed with
+# pvlib[optional], but that fails on Raspberries, since nrel-pysam (which would
+# then also be installed) requires a 64-bit version of Linus
+netcdf4
+siphon
+# .. and finally pvlib
+pvlib>=0.9.0

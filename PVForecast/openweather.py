@@ -13,11 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 from datetime import datetime, timezone
@@ -49,6 +44,7 @@ class OWMForecast(Forecast):
             url = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + latitude + '&lon=' + longitude + '&exclude=minutely,daily,alerts&appid=' + apikey
             req = requests.get(url)
             if (req.reason != 'OK'):
+                sys.tracebacklimit=0
                 raise Exception("getForecast_OWM: Can't fetch OpenWeatherMap data from '" + url + "' --- Reason: " + req.reason)
             self.DataTable     = pd.DataFrame(req.json()['hourly'])
             df_idx             = pd.to_datetime(self.DataTable['dt'], unit='s', utc=True)

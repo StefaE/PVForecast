@@ -13,14 +13,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
-from datetime import datetime, timezone
 import requests
 import sys
 
@@ -48,6 +42,7 @@ class VisualCrossing(Forecast):
             url       = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/' + latitude + '%2C' + longitude + '?unitGroup=metric&include=hours&key=' + apikey + '&contentType=json'
             req       = requests.get(url)
             if (req.status_code != 200):                                                   # ... for some reason, req.reason is empty
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- Can't fetch VisualCrossing data from '" + url + "' --- Reason: " + req.reason)
             value          = req.json()
             dict           = {}

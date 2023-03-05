@@ -13,11 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 import requests
@@ -59,16 +54,18 @@ class DWDForecast(Forecast):
     def getForecast_DWD_L(self):                                                         # get forecast from DWD web page --> self.kml as XML elementtree
         """Get newest MOSMIX_L forecast (file for selected station); store file as .zip"""
 
-        baseurl = self.config['DWD'].get('DWD_URL_L')                                    # station based 'long', six-hourly forecast
+        baseurl = self.config['DWD'].get('DWD_URL_L', 'https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/')        # station based 'long', six-hourly forecast
         station = self.config['DWD'].get('DWDStation')
         url     = baseurl + station + '/kml/MOSMIX_L_LATEST_' + station + '.kmz'
         try:
             req     = requests.get(url)                                                  # get .kmz file
             if (req.reason != 'OK'):
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- Can't download file '" + url + "' --- Reason: " + req.reason)
             zipfile = ZipFile(BytesIO(req.content))                                      # .kmz is zip-compressed, so read content as bytestream into ZipFile
             names   = zipfile.namelist()                                                 # find file names in .kmz file
             if (len(names) != 1):                                                        # we expect exactly one file, else we don't know what to do
+                sys.tracebacklimit=0
                 raise Exception ("ERROR --- " + str(len(names)) + " files found inside '" + url + "', should be == 1")
             self.kmlName = names[0]
             kmlfile      = zipfile.open(names[0])
@@ -89,16 +86,18 @@ class DWDForecast(Forecast):
         """Get newest MOSMIX_S forecast (global file), extract data for selected station; 
         store extracted file as xxx_<station>.kml.gz"""
         
-        url     = self.config.get('DWD', 'DWD_URL_S')
+        url     = self.config['DWD'].get('DWD_URL_S', 'https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_S/all_stations/kml/')
         station = self.config['DWD'].get('DWDStation')
         try:
             req      = requests.get(url)
             if (req.reason != 'OK'):
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- Can't open page '" + url + "' --- Reason: " + req.reason)
             page     = requests.get(url).text
             soup     = BeautifulSoup(page, 'html.parser')
             files    = [url + '/' + node.get('href') for node in soup.find_all('a') if node.get('href').endswith('kmz')]
             if (len(files) < 2):
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- Expected to find at least two file links at '" + url + "'")
             myRemote = files[len(files)-2]                                               # file to fetch from remote (last but one, as last is '_LATEST')
             myLocal  = self.storePath + os.path.basename(myRemote)                       # where to store downloaded file
@@ -115,6 +114,7 @@ class DWDForecast(Forecast):
                 kmlName = re.sub(r'\.kmz', '.kml', kmlName)
                 req     = requests.get(myRemote)
                 if (req.reason != 'OK'):
+                    sys.tracebacklimit=0
                     raise Exception("ERROR --- Can't download file '" + myRemote + "' --- Reason: " + req.reason)
                 open(myLocal, 'wb').write(req.content)
 
@@ -140,6 +140,7 @@ class DWDForecast(Forecast):
                 kml += '   </kml:Document>\n</kml:kml>'
                 kmlfile.close()
                 if (extract != 3):
+                    sys.tracebacklimit=0
                     raise Exception("ERROR --- Station " + station + " not found")
                 self._kml     = ET.fromstring(kml)
                 self.SQLTable = 'dwd_s'
@@ -169,6 +170,7 @@ class DWDForecast(Forecast):
                 zipfile = ZipFile(file)
                 names   = zipfile.namelist()
                 if (len(names) != 1):
+                    sys.tracebacklimit=0
                     raise Exception("ERROR --- " + str(len(names)) + " files found inside '" + file + "', should be == 1")
                 kml = zipfile.open(names[0]).read()
                 self._kml = ET.fromstring(kml)
@@ -177,6 +179,7 @@ class DWDForecast(Forecast):
             elif (bool(re.search(r'\.(kml|xml)$', file, re.IGNORECASE))):
                 self._kml = ET.parse(file)
             else:
+                sys.tracebacklimit=0
                 raise Exception("ERROR --- unknown file type for weather file " + file)
             self.kmlName  = re.sub(r'\.(zip|kml\.gz|kmz|xml)$', '.kml', file, re.IGNORECASE)
             self.kmlName = os.path.basename(self.kmlName)
@@ -201,6 +204,7 @@ class DWDForecast(Forecast):
                 valStrArray    = elementpath.select(self._kml, '//dwd:Forecast/dwd:value', self._kmlNS)
                 weatherData    = {}
                 if (len(ParaNames) != len(valStrArray)):
+                    sys.tracebacklimit=0
                     raise Exception("ERROR --- length mismatch in parseKML()")
                 for i, param in enumerate(ParaNames):
                     valStr = valStrArray[i].text.replace('-', 'nan')
@@ -233,8 +237,8 @@ class DWDForecast(Forecast):
                                          'Neff' : 'clouds'}, inplace=True)
         if 'Rad1h' in self.DataTable:
             self.DataTable.rename(columns = {'Rad1h': 'ghi'}, inplace=True)
-            self.DataTable['ghi'] = self.DataTable['ghi'] * 0.2777778                # convert to Rad1h [kJ/m^2] to Wh/m^2
+            self.DataTable['ghi'] = self.DataTable['ghi'] * 0.2777778                    # convert to Rad1h [kJ/m^2] to Wh/m^2
         if 'RRad1' in self.DataTable:
             self.DataTable.rename(columns = {'RRad1': 'kt'}, inplace=True)
-            self.DataTable['kt'] = self.DataTable['kt']/100                          # convert to RRad1 to kt (/100)
+            self.DataTable['kt'] = self.DataTable['kt']/100                              # convert to RRad1 to kt (/100)
         return()

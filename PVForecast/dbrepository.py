@@ -13,14 +13,10 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 import sqlite3
+import sys
 from datetime  import datetime, timezone
 from .forecast import Forecast
 
@@ -31,6 +27,10 @@ class DBRepository:
         """Initialize DBRepository
         config      configparser object with section [PVSystem]"""
         self.config  = config
+        self._db     = None
+        if 'DBRepo' not in self.config.sections():
+            sys.tracebacklimit=0
+            raise Exception("missing section 'DBRepo' in config file")
         path         = self.config['DBRepo'].get('storePath')
         self.dbName  = path + '/' + self.config['DBRepo'].get('dbName')                   # database name (including path)
         self._db     = sqlite3.connect(self.dbName)                                       # db connector
@@ -42,7 +42,8 @@ class DBRepository:
 
     def __del__(self):
         """Deconstructor: close database connection"""
-        self._db.close()
+        if self._db is not None:
+            self._db.close()
 
     def loadData(self, data: Forecast):
         """Store data (subclass of Forecast) in SQLite database"""
@@ -51,7 +52,7 @@ class DBRepository:
         table = data.SQLTable
         if (table not in self._tables):                                                  # create database table table
             sql = (' real, ').join(data.get_ParaNames()) + ' real'
-            sql = 'CREATE TABLE ' + table + ' (IssueTime text, PeriodEnd text, ' + sql + ', PRIMARY KEY(IssueTime, PeriodEnd));'
+            sql = 'CREATE TABLE `' + table + '` (IssueTime text, PeriodEnd text, ' + sql + ', PRIMARY KEY(IssueTime, PeriodEnd));'
             c.execute(sql)
             myData = data.DataTable
         else:                                                                            # check wether we have omitted / newfields
@@ -61,21 +62,22 @@ class DBRepository:
             myData   = data.DataTable[data.DataTable.columns.intersection(cols)]
             newCols  = data.DataTable.columns.difference(cols)                           # we load only columns existing in database, but warn on new columns
             if (len(newCols) > 0):
-                print("Warning - New columns found in incoming data for table " + table + " at " + data.IssueTime)
+                print("Warning - New columns found in incoming data for table '" + table + "' at " + data.IssueTime)
                 print(*newCols)
         
-        c.execute("SELECT IssueTime FROM " + table + " WHERE IssueTime='" + data.IssueTime + "';")
+        c.execute("SELECT IssueTime FROM `" + table + "` WHERE IssueTime='" + data.IssueTime + "';")
         if (c.fetchone() != None):
-            print("Message - IssueTime " + data.IssueTime + " already exists in table " + table + ", no data to add to DB")
+            print("Message - IssueTime " + data.IssueTime + " already exists in table '" + table + "', no data to add to DB")
         else:
             myData['IssueTime'] = data.IssueTime
             myData.to_sql(table, self._db, if_exists='append')
+            myData.drop(columns=['IssueTime'], inplace=True)                             # else, further storage methods (such as writeCSV) would see this field
         c.close()
 
     def getLastIssueTime(self, table):
         if (table in self._tables): 
             c = self._db.cursor()
-            c.execute("SELECT max(IssueTime) FROM " + table + ";")
+            c.execute("SELECT max(IssueTime) FROM `" + table + "`;")
             t = c.fetchone()[0]
             IssueTime = datetime.fromisoformat(t)
         else:

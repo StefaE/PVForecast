@@ -13,11 +13,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-This is the main script to run a simulation of PVControl for one or multiple days. 
-This script is typically called interactively on a performant machine. By default, 
-config.ini in the local directory is the configuration file. But argument -c can
-specify a different file.
 """
 
 from pysolcast.rooftop import RooftopSite
@@ -53,6 +48,7 @@ class SolCast(Forecast):
         except:
             if interval   == 'late':  self._interval = -1                                # call often late,  at cost of neglecting early
             elif interval == 'early': self._interval = -2                                # call often early, at cost of neglecting late
+            elif interval == '24h':   self._interval = -3
             else:                     self._interval =  0                                # call often over mid-day
         self._db           = None                                                        # DBRepository object once DB is opened
         self._storeDB      = self.config['SolCast'].getboolean('storeDB', 0)             # ... store to DB
@@ -60,7 +56,8 @@ class SolCast(Forecast):
         self._storeCSV     = self.config['SolCast'].getboolean('storeCSV')               # ... store to csv in storePath
         self.storePath     = self.config['SolCast'].get('storePath')
         self._force        = self.config['SolCast'].getboolean('force', False)           # force download - note that we are restricted in number of downloads/day
-        self._apiCalls     = 50                                                          # max API calls per day
+        self._apiCalls     = self.config['SolCast'].getint('apiCalls', 50)               # max API calls per day
+        self._optimal      = self.config['SolCast'].getboolean('optimal', 15)            # optimal polling interval, depends on zone
         if self._force:
             print("Warning --- SolCast download forced!!! Note limits in number of downloads/day!")
         self.SQLTable      = 'solcast'
@@ -73,7 +70,7 @@ class SolCast(Forecast):
         now_utc        = datetime.now(timezone.utc)
         mySun          = sun(location.observer, date=now_utc)
         retVal         = False
-        if self._force or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
+        if self._force or self._interval == -3 or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
             if self._storeDB or self._storeInflux:
                 if self._storeDB:
                     self._db        = DBRepository(self.config)
@@ -87,19 +84,26 @@ class SolCast(Forecast):
                     if self._force or delta_t > self._interval - 2:
                         retVal = True
                 else:                                                                    # self._interval = 0: Choose optimal interval
-                    optimal      = 15                                                    # optimal interval for single site / dual site setup
+                    optimal      = self._optimal                                         # optimal interval for single site / dual site setup
                     have         = self._apiCalls - 1                                    # keep one API call as reserve
                     if self._site_2 is not None:
                         optimal  = optimal*2
                         have     = int(have/2)                                           # split-arrays need two calls per download
                     need         = int((int((mySun['sunset'] - mySun['sunrise']).total_seconds()/60)+1)/optimal)+1     # number of 'optimal' minute intervals between sunrise and sunset
                     long         = need - have                                                                         # number of times where we can only call at longer intervals
-                    if   self._interval ==  0 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal:
+                    if   self._interval ==  0 and ((now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal):
                         interval = optimal*2
                     elif self._interval == -1 and (now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal*2:    # focus on late,  neglect early
                         interval = optimal*2
                     elif self._interval == -2 and (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal*2:     # focus on early, neglect late
                         interval = optimal*2
+                    elif self._interval == -3:                                                                         # download in regular intervals during full day (24h)
+                        need     = 24*60/optimal
+                        interval = optimal*need/have
+                        i        = interval//15
+                        j        = interval%15
+                        if j == 0: interval = i*optimal
+                        else:      interval = (i+1)*optimal
                     else:
                         interval = optimal
                     if delta_t > interval - 2:

@@ -1,246 +1,331 @@
 ---
 title: Users Guide
 layout: template
-order: 2
+order: 4
 filename: README
 ---
 
 # PVForecast User's Guide
-A high level introduction to the project is given [here](https://stefae.github.io/PVForecast/)
+A high level introduction to the project is given [here](https://stefae.github.io/PVForecast/). This _README_ file provides a full description of installation and configuration
  
 ## Introduction
-The user has to make one upfront decision: Which version to install? Two flavors exist:
+An extensive set of forecasts relevant to PV rooftop installations is supported:
+* production forecasts based on a number of providers (many users may focus on [SolCast](https://solcast.com/free-rooftop-solar-forecasting) for easy installation and excellent forecast quality)
+* <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
+	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
+	+ auction prices of grid electricity
 
-Script | Description | Config File
--------|-------------|------------
-`SolCastLight.py` | can only use [Solcast](https://solcast.com/) forecasts but is significantly easier to install and configure | ./solcast_light_config.ini
-`PVForecasts.py` | enables all functionality described in this `ReadMe` | ./config.ini
-
-An upgrade from the light to the full version is possible at any time, just requiring the execution of the additional installation steps.
-
-<span style="color:red"><b>Upgrade Notice:</b></span> 
-v2.0 contains some incompatible changes (for the **full version** only) - see [Version History](#version-history). For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
-
-
-## SolCastLight: Minimalistic Installation
-The following description of the full script is relatively complex. Hence, this section describes the **minimalisic** needs to only run SolCast forecasting:
-1. prepare Python to run the script:
-   1. [Basic Installation](#the-basics)
-   2. [add some Python modules](#minimal-requirements)
-2. update `solcast_light_config.ini` to your SolCast registration
-   1. [SolCast Configuration](#solcast-configuration)
-   2. [Influx Storage Configuration](#influx-storage)
-   3. (depricated): [SolCast Tuning Configuration](#solcast-tuning)
-3. if integration with [Solaranzeige](https://solaranzeige.de) is desired, read [this](#solaranzeige-integration)
-4. [Install and run script](#running-the-script)
-
-A couple of more options can be configured, but are left out of this brief description. They would become obvious when reading the full text below.
+<span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
+* v2.1 requires pvlib v0.9.0 or higher (for **full version only**); small changes to `config.ini` keys and defaults, `SolCastLight` is deprecated (but still works)
+* v2.0 contains some incompatible changes (for the **full version** only) - . For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
 
 -------------
 ## Table of Content
-  * [Introduction](#introduction)
-  * [SolCastLight: Minimalistic Installation](#solcastlight-minimalistic-installation)
-  * [Main Functionality and Configuration](#main-functionality-and-configuration)
-    + [Forecast Sources](#forecast-sources)
-    + [_Solcast_ Configuration](#solcast-configuration)
-    + [_VisualCrossing_ Configuration](#visualcrossing-configuration)
-    + [_OWM_ configuration](#owm-configuration)
-    + [_MOSMIX_ configuration](#mosmix-configuration)
-    + [_FileInput_ configuration](#fileinput-configuration)
-    + [Forecast models](#forecast-models)
-      - [Convert Weather Data to Irradation Data](#convert-weather-data-to-irradation-data)
-      - [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
-      - [Split Array System Configuration](#split-array-system-configuration)
-    + [Data Storage](#data-storage)
-      - [SQLite Storage](#sqlite-storage)
-      - [Influx v1.x Storage](#influx-v1x-storage)
+  - [Installation](#installation)
+    - [Setup](#setup)
+    - [Running the Script](#running-the-script)
+  - [Configuration](#configuration)
+    - [Sections](#sections)
+    - [Default Section](#default-section)
+  - [Configuring Data Sources](#configuring-data-sources)
+    - [Forecast Sources](#forecast-sources)
+    - [SolCast Configuration](#solcast-configuration)
+    - [VisualCrossing Configuration](#visualcrossing-configuration)
+    - [DWD configuration](#dwd-configuration)
+    - [OpenWeatherMap Configuration](#openweathermap-configuration)
+    - [Entso-E Configuration](#entso-e-configuration)
+    - [CO2signal Configuration](#co2signal-configuration)
+    - [FileInput Configuration](#fileinput-configuration)
+  - [Configuring PV Output Power Forecast Modelling](#configuring-pv-output-power-forecast-modelling)
+    - [Convert Weather Data to Irradiation Data](#convert-weather-data-to-irradiation-data)
+    - [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
+      - [PVWatts Modelling](#pvwatts-modelling)
+      - [CEC Modelling](#cec-modelling)
+    - [Split Array System Configuration](#split-array-system-configuration)
+  - [Configuring Data Storage](#configuring-data-storage)
+    - [SQLite Storage](#sqlite-storage)
+    - [Influx Storage](#influx-storage)
       - [Influx v2.x Storage](#influx-v2x-storage)
-      - [.csv File Storage](#csv-file-storage)
-    + [Solaranzeige Integration](#solaranzeige-integration)
-  * [Installation](#installation)
-    + [The Basics](#the-basics)
-    + [Minimal Requirements](#minimal-requirements)
-    + [Full Installation](#full-installation)
-    + [Optional](#optional)
-  * [Running the Script](#running-the-script)
-  * [To Do](#to-do)
-  * [Deprecated](#deprecated)
-    + [Solcast Tuning](#solcast-tuning)
-  * [Version History](#version-history)
-  * [Acknowlegements](#acknowlegements)
-  * [Disclaimer](#disclaimer)
-  * [License](#license)
-
-<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+      - [Influx v1.x Storage](#influx-v1x-storage)
+    - [.csv File Storage](#csv-file-storage)
+  - [Version History](#version-history)
+    - [Deprecations](#deprecations)
+  - [Acknowlegements](#acknowlegements)
+  - [License and Disclaimer](#license-and-disclaimer)
 
 -------------
 
-The reminder of this `ReadMe` file is meant to describe the full script configuration. 
+## Installation
 
-## Main Functionality and Configuration
-`.\config.ini` is a configuration file parsed with python's [configparser](https://docs.python.org/3/library/configparser.html). Most importantly:
-* items can be promoted to the `[DEFAULT]` section if same `key = value` pair is used in multiple sections
+### Setup
+
+Installation mainly ensures that all necessary python packages are available. We assume a Raspberry host here - although the instructions are probably quite generic. The scrip requires Python 3.8 or newer.
+
+Required packages are described in [requirements.txt](https://github.com/StefaE/PVForecast/blob/main/requirements.txt). These packages can be installed manually (with `python -m pip install package)` or with `python -m pip install -r requirements.txt`. Referring to this file, which contains comments:
+* the first group of packages is required mandatorily
+* the `Influx` related packages are required if [Data Storage](#configuring-data-storage) to `Influx` (v1.8 or v2.x) is desired.
+* the last group of packages are the most difficult to install, but only required if corresponding functionality is needed:
+  + `pvlib` models [PV output power](#configuring-pv-output-power-forecast-modelling) and used for  [Forecast Sources](#forecast-sources) providing radiation data (`VisualCrossing`, `MOSMIX`, `OWM`) but **not** for `SolCast`
+  + `entso-py` is required only for [CO2 intensity forecast](#entso-e-configuration) (and easy to install)
+  
+[Influx](https://www.influxdata.com/products/influxdb/) must be installed separately. `SQLite` is supported natively by Python. However, an [SQLite browser](https://sqlitebrowser.org/) maybe useful.
+
+Additional help for installation is in the [project wiki](https://github.com/StefaE/PVForecast/wiki).
+
+### Running the Script
+
+After downloading the script from Github, into a directory of your choosing (eg. `\home\pi\PV`), you should have these files (and some more):
+```
+./PVForecasts.py
+./config.ini
+  |- ./PVForecast/*py
+  |- ./docs
+  |- ./emissionFactors
+  +- ./data
+./LICENSE
+```
+
+* update the config file (`config.ini`)
+* try it out ...: `python PVForecast.py`
+* install it in `cron`, so that it runs in regular time intervals
+
+A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
+```
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecast.py >> /home/pi/PV/data/err.txt 2>&1
+```
+which would run the script every 15min 
++ 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
++ when using `solcast_light_config.ini` it is recommended to rename this file to `config.ini`. Then we don't need the `-c` argument
+
+A great explanation of `cron` is from [crontab guru](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
+
+**Note:** The script doesn't do much in terms of housekeeping (eg., limit size of SQLite database or `err.txt` file used above to redirect error messages).
+
+## Configuration
+`.\config.ini` is a configuration file parsed with python's [configparser](https://docs.python.org/3/library/configparser.html). It consists of `Sections` and `key = value` pairs. Most importantly:
 * inline comments are configured to start with `#`
 * multi-line values are not allowed
-* out-commented `key = value` pairs show the respective default options, which could be changed as needed
+* out-commented `key = value` pairs in the provided `config.ini` template show the respective default options
+* the [template config.ini](https://github.com/StefaE/PVForecast/blob/main/config.ini) contains many useful comments, so should be read alongside this description
+* a few site specific values, which cannot be pre-configured. The are shown as `<xx>`.
 
-The `config.ini` file provided with the distribution contains a few site specific values, which cannot be pre-configured. The are shown as `<xx>`. This file should be read alongside the below text for best understanding.
+### Sections
 
-Note that all times throughout this project are in UTC.
+Section | Description |
+--------|-------------|
+`[Default]`	| If a key-value pair is not found in a specific section, the corresponding value in the default section is used. |
+`[Forecasts]` | Forecasts to be run. If this section is missing, all forecasts for which a specific section exists is run |
+Forecast configs | Each forecast source has its own section: _SolCast, VisualCrossing, DWD, OpenWeatherMap, Entso-E, CO2signal, FileInput_ |
+`[PVSystem]` | describes the PV system (for forecast sources which require modelling: _VisualCrossing, DVD, OpenWeatherMap_. For [split-array configurations](#split-array-system-configuration), additional sections can be created |
+`[DBRepo]` | configuration of [_SQLite_ storage](#sqlite-storage)
+`Influx]`  | configuration of [_Influx_ storage](#influx-storage)
+
+### Default Section
+
+The following parameters are used by many forecast sources and hence typically placed into the `[Default]` section.
+
+```
+[DEFAULT]
+    # ----------------------------------------------------- Storage locations
+    storePath         = ./data/   # storage location for files (.csv, .kml, ..._ and SQLite database)
+    # following parameters could be overwritten for individual forecast providers
+    storeDB           = 0         # store to SQLite database (see [DBRepo] for name)
+    storeCSV          = 0         # store .csv files (mainly for debugging)
+    storeInflux       = 1         # store DC power output estimates in Influx (see [Influx] for name)
+    # dropWeather     = 1         # drop weather parameters irrelevant for PV forecasting for 'storeDB', 'storeCSV'
+    # force           = 0         # force downloading of new data
+
+    # ----------------------------------------------------- Location of PV system
+    Latitude          = <latitude_of_your_system>
+    Longitude         = <longitude_of_your_system>
+    # Altitude        = 0            # altitude of system (meters above sea level)
+```
+
+Parameters `storeXX` all default to `0` (False), but at least one must be set to `1`.
+For `dropWeather`, see [SQLite Storage](#sqlite-storage)
+`force` overwrites time-based blocking of downloading new data, if, for a data source, last data was downloaded not too long ago. Blocking time intervals are different per data source.
+
+## Configuring Data Sources
 
 ### Forecast Sources
-```
-[Forecasts]                       # enable / disable certain forecasts
-    Solcast           = 1         # Solcast.com
-    VisualCrossing    = 0         # VisualCrossing.com
-    OWM               = 0         # OpenWeatherMap.org
-    MOSMIX_L          = 0         # single station file, updated every 6h
-    MOSMIX_S          = 0         # all stations,        updated hourly download
-    FileInput         = 0         # file input for weather data (for debugging)
-```
-
-Forecast Sources can be (dis-)enabled with 0 or 1. Any number of sources can be enabled simultaneously.
 
 Source | Description | Look-ahead |
 -------|-------------|------------|
-**Solcast** | Solar forecast by [Solcast](https://solcast.com/) | 7 days
-**VisualCrossing** | Weather and solar forecast from [VisualCrossing](https://www.visualcrossing.com/) | 15 days
-**MOSMIX** | provided by [Deutscher Wetterdienst](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html) (primarily for Germany). Two flavours exist: | 10 days
-_MOSMIX_L_| single station forecast, updated four times per day and approx. 115 weather parameters | 
-_MOSMIX_S_| comprehensive download file of all MOSMIX weather stations, updated hourly, containing approx. 40 weather parameters.| 
-**OWM** | Weather forecast from [OpenWeatherMap.org](https://openweathermap.org/) with approx. 10 parameters | 2 days
+[Solcast](#solcast-configuration) | Solar forecast by [Solcast](https://solcast.com/) | Default 7 days |
+[VisualCrossing](#visualcrossing-configuration) | Weather and solar forecast from [VisualCrossing](https://www.visualcrossing.com/) | 15 days |
+[DWD](#dwd-configuration) | provided by [Deutscher Wetterdienst](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html) (primarily for Germany). Two flavours exist: | 10 days |
+_MOSMIX_L_ | single station forecast | 
+_MOSMIX_S_ | all weather stations | 
+[OpenWeatherMap](#openweathermap-configuration) | Weather forecast from [OpenWeatherMap.org](https://openweathermap.org/) with approx. 10 parameters. Cloud coverage is used for PV output power forecast | 2 days |
+[Entso-E](#entso-e-configuration) | CO2 intensity for grid power, Electricity auction prices (EU only, based on data from [Entsoe Transparency Platform](https://transparency.entsoe.eu/)) | ~1 day |
+[CO2signal](#co2signal-configuration) | actual CO2 intensity for grid power, provided by [Electricity Maps](https://www.electricitymaps.com/) | na |
 
-**NOTE:** MOSMIX_S causes the download of a ~37MByte file every hour - ensure that you really want to do that and that you have enough internet bandwidth!
+_VisualCrossing, DWD_ and _OpenWeatherMap_ need modeling as described [below](#configuring-pv-output-power-forecast-modelling)
 
 Depending on the data source, various forecast algorithms are available. The configuration happens in the respective sections described below.
 
-### _Solcast_ Configuration
+### SolCast Configuration
 ```
 [SolCast]
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
     # interval        =  0        # interval at which SolCast is read (during daylight only)
-    # Latitude        = 50.2      # defaults describe Frankfurt, Germany
-    # Longitude       =  8.7
-    # hours           = 168       # defaults to 7 days if pysolcast v1.0.12 is installed
+    # hours           = 168       # forecast period defaults to 7 days, up to 14 days (336h)
+    # apiCalls        =  50       # number of API calls supported by SolCast   
+    # optimal         =  15       # optimal time interval to call SolCast, in minutes
 ```
 
-[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residental rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key.
+[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residential rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key. _SolCast_ also supports [dual array systems](https://articles.solcast.com.au/en/articles/2887438-how-do-i-create-a-multiple-azimuth-rooftop-solar-site) (eg., east/west) through a second `resource_id_2`.
 
-Solcast directly provides a PV forecast (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed.
+_SolCast_ directly provides a PV forecasts (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed. Forecasts are [updated every 15min](https://solcast.com/live-and-forecast) (for Eurasia). For other regions (Asia Pacific, Americas), `optimal` can be adapted accordingly
 
-[Since tuning was deprecated](https://articles.solcast.com.au/en/articles/4945263-pv-tuning-discontinued), Solcast allows the definition of a second rooftop site to support dual-array setups (eg., east/west). In such a situation, an additional `resource_id_2` can be provided. It will be queried at the same times as `resource_id`. Individual and total forecast results will be stored in the database(s)
-
-To stay within the limits of 50 API calls/day, the script calls the API only between sunrise and sunset. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
+To stay within the limits of `apiCalls` per day, the script calls the API only between sunrise and sunset, except in the `24h` configuration below. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
 
 value | meaning
 ------|---------
 0     | **Default**: call API every 15min (single array) or 30min (dual-array). To not exceed maximum API calls, extend interval to 30min (60min) after sunrise and before sunset on long days. Hence, this provides most accurate (short-term) forecasts during mid-day.
 early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning
-late  | same as `0`, but all intervall extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon
-number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minues.
+late  | same as `0`, but all interval extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon
+24h   | downloads over the full day, but intervals are longer than in the previous configuration
+number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minutes.
 
-There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [below](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
+There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [above](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
 
-Purpose of `Latitude` and `Longitude` parameters (which maybe better placed in `[Default]` section, if weather based forecasts, as described in the following sections, are also calculated) is to know sunrise and sunset times. Defaults are for Frankfurt, Germany. (SolCast has it's own location information, associated with the `api_key`.)
+Parameters `Latitude` and `Longitude` are only used to calculate daylight time. Defaults are for Frankfurt, Germany. (The _SolCast_ service has it's own location information, associated with the `api_key`.)
 
-`hours` defines the forecast period and defaults to 168h (if `pysolcast` v1.0.12 is [used](#minimal-requirements), else to 48h as default of the SolCast web service)
+`hours` defines the forecast period and defaults to 168h, but can be extended up to 14 days (336h)
 
-### _VisualCrossing_ Configuration
+### VisualCrossing Configuration
 ```
 [VisualCrossing]
     api_key           = <api_id_from_visualcrossing.com>
     # Irradiance      = disc        # default irradiation model
-    Latitude          = 51.7        # location for which forecast is to be retrieved
-    Longitude         =  6.1
-    # dropWeather     =  1
 ```
 [VisualCrossing](https://www.visualcrossing.com/weather-data-editions) offers free access to their API to regularly download weather forecasts. The registration process provides a 25 character API key.
 
-The [Weather Timline API](https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/) provides a 15-day forecast of approx. 18 parameters, including _solarradiation_ (or GHI). This can be converted to a PV output power forecast (see [Forecast Models](#forecast-models)). The modelling strategy is controlled with the `Irradiance` parameter as described below.
+The [Weather Timeline API](https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/) provides a 15-day forecast of approx. 18 parameters, including _solarradiation_ (or GHI). This can be converted to a PV output power forecast (see [Forecast Models](#configuring-pv-output-power-forecast-modelling)). The modelling strategy is controlled with the `Irradiance` parameter as described below.
 
-For `dropWeather`, see [SQLite Storage](#sqlite-storage)
+`dropWeather`, `Latitude` and `Longitude` are typically provided in `[Default]` section.
 
-### _OWM_ configuration
+### DWD configuration
+
+[Deutscher Wetterdienst (DWD)](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html) supports two (file based) interfaces (without the requirement of authentication):
+* `MOSMIX_L`: single weather station forecast, updated four times per day and approx. 115 weather parameters
+* `MOSMIX_S`: all MOSMIX weather stations, updated hourly, containing approx. 40 weather parameters
+
+Although both interfaces are supported, it is strongly suggested to use `MOSMIX_L`, since `MOSMIX_S` causes a download volume of ~1GByte/day without improving the forecast quality (despite the shorter update interval). `MOSMIX_S` can only be called from the [Forecast](#sections) section.
+
+```
+[DWD]
+    DWDStation        = <station_number>    # Station number
+    # DWD_URL_L       = https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/
+    # DWD_URL_S       = https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_S/all_stations/kml/
+    # Irradiance      = disc    # default irradiation model
+    # storeKMZ        = 0       # store downloaded .kmz files (.kml compressed as .zip)
+    # keepKMZ_S       = 0       # keep MOSMIX_S original file after downloading - note that these are many big files!
+```
+
+Valid `DWDStation` values are defined on the [MOSMIX website](https://wettwarn.de/mosmix/mosmix.html)
+
+`storeKMZ`: The files downloaded are named `*.kmz` which is inadequate in two ways: First, the files are simple `.zip` files (so, why are they not called that way?) and second, a `.zip` file is meant to contain multiple files, which clearly the `.kmz` files never do. Hence, with `storeKMZ = 1`, downloaded data is stored in the more adequate `.gz` format. For _MOSMIX_L_, the downloaded files for the selected station are stored. For _MOSMIX_S_, an extract for the selected station is stored in a self-contained compressed `.xml` file. That format is very similar to _MOSMIX_L_ files.
+
+`keepKMZ_S`: in case of downloading the (huge) _MOSMIX_S_ file, they can be stored by enabling this option. 
+
+The modelling strategy used to convert weather data to irradiance is controlled with the `Irradiance` parameter as described in the next section. Not all MOSMIX stations support irradiance data (inconveniently labeled `Rad1h`). If the chosen station does not have it, irradiance based models won't work, but cloud-based models still do.
+
+`dropWeather` is typically provided in `[Default]` section.
+
+### OpenWeatherMap Configuration
+
 ```
 [OpenWeatherMap]
     api_key           = <api_id_from_openweathermap.org>
     # Irradiance      = clearsky_scaling    # default irradiation model
-    Latitude          = 51.7                # location for which forecast is to be retrieved
-    Longitude         =  6.1
-    # dropWeather     =  1
 ```
 
 [OpenWeatherMap](https://openweathermap.org/price) offers free access to their API to regularly download weather forecasts. The registration process provides a 32 character API key.
 
-The weather forecast consists of approx. 10 parameters, including cloud coverage, which can be modelled to a PV forecast (see [Forecast Models](#forecast-models)). The modelling strategy is controlled with the `Irradiance` parameter as described below.
+The weather forecast consists of approx. 10 parameters, including cloud coverage, which can be modelled to a PV forecast (see [Forecast Models](#configuring-pv-output-power-forecast-modelling)). The modelling strategy is controlled with the `Irradiance` parameter as described below.
 
-For `dropWeather`, see [SQLite Storage](#sqlite-storage)
+`dropWeather`, `Latitude` and `Longitude` are typically provided in `[Default]` section.
 
-### _MOSMIX_ configuration
+### Entso-E Configuration
+
+<span style="color:#00B0F0"><b>new</b></span> - this works only for EU area. A detained introduction to the ideas behind this is given on a separate [CO2 Intensity](CO2Intensity) page
+
+[Entso-E](https://www.entsoe.eu/), the _European Network of Transmission System Operators for Electricity_, operates the [EU Transparency Platform](https://transparency.entsoe.eu/dashboard/show) with the goal to promote transparency goals to stakeholders.
+
 ```
-[DWD]
-    DWD_URL_L         = https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_L/single_stations/
-    DWD_URL_S         = https://opendata.dwd.de/weather/local_forecasts/mos/MOSMIX_S/all_stations/kml/
-    DWDStation        = <station_number>    # Station number
-    # Irradiance      = disc    # default irradiation model
-    # storeKMZ        = 0       # store downloaded .kmz files (.kml compressed as .zip)
-    # keepKMZ_S       = 0       # keep MOSMIX_S original file after downloading - note that these are many big files!
-    # dropWeather     = 1
+[Entso-E]
+    api_key             = <api_from_Entso-E>
+    zones               = DE, DE_AMPRION                       # comma separated list of zones to be analyzed
+    # resolution        = 60T                                  # some countries offer bidding prices for different time intervals, typically 15T and 60T
+    # verbose           = 0                                    # verbosity level: 0=default, 1=basic, 2=max; forced =2 if start/end date are given
+    # keepRaw           = 0                                    # default 0, together with start/end can be used to dump Entso-E data to .csv
+    # start             = 2023-01-01T23:00Z                    # - see User's Guid
+    # end               = 2023-02-18T23:00Z                    # -
+    # loop              = 0                                    # -
 ```
 
-Unlike modern APIs, _Deutscher Wetterdienst_ (DWD) allows only file download for what they call [MOSMIX data](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html). Hence, the software described here has to accomodate for the associated complications.
+An `api_key` can be requested as described in the [User's Guide, chapter 2](https://transparency.entsoe.eu/content/static_content/Static%20content/web%20api/Guide.html#_authentication_and_authorisation).
 
-Two download schemes (as described [above](#forecast-sources)) exist. Keys `DWD_URL_L` and `DWD_URL_S` provide the respective stems of download links. The station abreviation needs be taken from [their website](https://wettwarn.de/mosmix/mosmix.html)
+Data can then be downloaded for a comma separated list of `zones`. Depending on selected zone(s), different data is available and calculated. A list of zones - and available data per zone - is [here](https://github.com/StefaE/PVForecast/docs/EntsoE_Zones.pdf). For more details, refer to the [CO2 Intensity](CO2Intensity) page, where also the other parameters are explained.
 
-`storeKMZ`: The files downloaded are named `*.kmz` which is inadequate in two ways: First, the files are simple `.zip` files (so, why are they not called that way?) and second, a `.zip` file is meant to contain multiple files, which clearly the `.kmz` files never do. Hence, with `storeKMZ = 1`, downloaded data is stored in the more adequate `.gz` format. For _MOSMIX_L_, the downloaded files for the selected station are stored. For _MOSMIX_S_, an extract for the selected station is stored in a self-contained compressed `.xml` file. That format is very similar to _MOSMIX_L_ files.
+To get accurate data, a rolling linear correlation fit between forecasts and actuals is used. Due to this, the system needs to run for a couple of days before accurate forecasts are achieved.
 
-`keepKMZ_S`: in case of downloading the (huge) _MOSMIX_S_ file, they can be stored by enabling this option. **Note** that approx. 900MByte/day of storage space will be consumed!
+### CO2signal Configuration
 
-The modelling strategy used to convert weather data to irradiance is controlled with the `Irradiance` parameter as described in the next section. Not all MOSMIX stations support irradiance data (inconvenitently labeled `Rad1h`). If the chosen station does not have it, irradiance based models won't work, but cloud-based models still do.
+<span style="color:#00B0F0"><b>new</b></span> - A detained introduction to the ideas behind this is given on a separate [CO2 Intensity](CO2Intensity) page
 
-For `dropWeather`, see [SQLite Storage](#sqlite-storage)
+```
+[CO2signal]
+    api_key             = <api_from_www.co2signal.com>
+    zones               = DE      # comma separated list of zones to be downloaded
+```
 
-### _FileInput_ configuration
+[ElectricityMaps](https://www.electricitymaps.com/) generate CO2 intensity data for many regions of the world. A free API is available at [CO2signal](https://www.co2signal.com/), which provides hourly data of the CO2 footprint of grid electricity (there is no forecast available), where a free `api_key` can be registered.
+
+`zones` is a comma-separated list of zones to be downloaded, from a list of [supported zones](https://api.electricitymap.org/v3/zones).
+
+### FileInput Configuration
+
 ```
 [FileInput]
     ...
 ```
-This forecast source is for mainly for debugging purposes and allows to read `.kmz` or `.csv` files with weather data. Refer to comments in sample `config.ini` file and `ForecastManager.processFileInput` for further guidence.
+This forecast source is for mainly for debugging purposes and allows to read `.kmz` or `.csv` files with weather data. Refer to comments in sample `config.ini` file and source code `ForecastManager.processFileInput` for further guidance.
 
-### Forecast models
-[![](./pictures/pvlib_powered_logo_horiz.png)](https://pvlib-python.readthedocs.io/en/stable/)
+## Configuring PV Output Power Forecast Modelling
+<a href="https://pvlib-python.readthedocs.io/en/stable/">
+   <img style="margin-left:0" src="pictures/pvlib_powered_logo_horiz.png">
+</a>
 
-Data from all sources except [SolCast](#solcast-configuration) do not directly contain PV output power. This needs be modelled using functionality provided by [pvlib](https://pvlib-python.readthedocs.io/en/stable/). 
-
-Multiple modelling approaches are supported, selected by the `Irradiance` parameter seen above. 
+Data from all PV output power related data sources (except [SolCast](#solcast-configuration)) do not directly contain PV output power. This needs be modelled using functionality provided by [pvlib](https://pvlib-python.readthedocs.io/en/stable/). 
 
 Essentially, the modelling consists of a two-step approach:
-1. convert weather data to irradiation data (GHI, DNI, DHI). Multiple conversion strategies are available and controlled with the `irradiance` parameter in the config section for `[DWD]` and `[OpenWeatherMap]`
+1. convert weather data to irradiation data (_GHI, DNI, DHI_). Multiple conversion strategies are available and controlled with the `Irradiance` parameter in the config section for `[VisualCrossing]`, `[DWD]` and `[OpenWeatherMap]` respectively.
 
 2. convert such irradiation data into PV output power. This is controlled in the config section `[PVSystem]`
 
-#### Convert Weather Data to Irradation Data
+### Convert Weather Data to Irradiation Data
 
 Model | Input parameter | Applicable to | Comment
 ------|-----------------|---------------|--------
-[disc](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.disc.html)  | `GHI`     | MOSMIX (*), VisualCrossing | default if GHI available
-[dirint](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.dirint.html) | `GHI` | MOSMIX (*), VisualCrossing | 
-[dirindex](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.dirindex.html) | `GHI` | MOSMIX (*), VisualCrossing | some numerical instabilities at very low values of GHI
-[erbs](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.erbs.html) | `GHI` | MOSMIX (*), VisualCrossing | 
-[campbell_norman](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.irradiance.campbell_norman.html) | `clouds` | OWM, MOSMIX | 
-[clearsky_scaling](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.forecast.ForecastModel.cloud_cover_to_irradiance_clearsky_scaling.html?highlight=clearsky_scaling) | `clouds` | OWM, MOSMIX | default if GHI not available, 
-[clearsky](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.location.Location.get_clearsky.html?highlight=get_clearsky#pvlib.location.Location.get_clearsky) | NA | all (except SolCast), output agnostic to weather forecast | clear sky estimation of PV output power; uses `simplified_solis`
+[disc](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.disc.html)  | `GHI`     | MOSMIX (*), VisualCrossing | default if GHI available
+[dirint](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.dirint.html) | `GHI` | MOSMIX (*), VisualCrossing | 
+[dirindex](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.dirindex.html) | `GHI` | MOSMIX (*), VisualCrossing | some numerical instabilities at very low values of GHI
+[erbs](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.erbs.html) | `GHI` | MOSMIX (*), VisualCrossing | 
+[campbell_norman](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.campbell_norman.html) | `clouds` | OWM, MOSMIX | 
+[clearsky_scaling](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.forecast.ForecastModel.cloud_cover_to_irradiance_clearsky_scaling.html) | `clouds` | OWM, MOSMIX | default if GHI not available, 
+[clearsky](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.location.Location.get_clearsky.html) | NA | all (except SolCast), output agnostic to weather forecast | clear sky estimation of PV output power; uses `simplified_solis`
 all | NA | NA | calculate all applicable models for provided weather data
 
 (*) not all MOSMIX stations provide GHI data
 
-Where needed, `DHI` is calculated from `GHI` and `DNI` using the fundamental equation `DNI = (GHI - DHI)/cos(Z)` where `Z` is the solar zenith angle (see eg. [Best Practices Handbook](https://www.nrel.gov/docs/fy15osti/63112.pdf))
+Where needed, `DHI` is calculated from `GHI` and `DNI` using the fundamental equation `DNI = (GHI - DHI)/cos(Z)` where `Z` is the solar zenith angle (see eg. [Best Practices Handbook](https://www.nrel.gov/docs/fy15osti/63112.pdf)). Weather parameters considered in above models include:
 
-Secondary weather parameters considered in above models include:
-
-Parameter | VisualCrossing | MOSMIX | OWM | unit
+Parameter | VisualCrossing | MOSMIX | OpenWeatherMap | unit
 ---------|-----------------|--------|-----|------
 ghi      | solarradiation | Rad1h | - | W/m<sup>2</sup>
 temp_air | temp | TTT | temp | K
@@ -251,28 +336,23 @@ clouds   | cloudcover | Neff | clouds | 0 .. 100
 
 Where needed, unit conversion and parameter renaming is performed. `Parameter` correspond to same-named `pvlib` parameters and are stored in the [SQLite Storage](#sqlite-storage), if enabled.
 
-MOSMIX `Rad1h` is (according to DWD customer service) the integrated radiation over the last hour prior to the forecast time stamp. For VisualCrossing, the [documentation](https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/) states that `solarradiation` is the power _at the instantaneous moment of the forecast_. Hence, it probably best reflects the average radiation for a period beginning 30min before and ending 30min after the forecast timestamp. To account for this, the forecast time stamp `period_end` is corrected by +30min (which is then slightly misleading for the secondary weather parameters reported) once it gets [written out](#data-storage)
+MOSMIX `Rad1h` is (according to DWD customer service) the integrated radiation over the last hour prior to the forecast time stamp. For VisualCrossing, the [documentation](https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api/) states that `solarradiation` is the power _at the instantaneous moment of the forecast_. Hence, it probably best reflects the average radiation for a period beginning 30min before and ending 30min after the forecast timestamp. To account for this, the forecast time stamp `period_end` is corrected by +30min (which is then slightly misleading for the secondary weather parameters reported) once it gets [written out](#configuring-data-storage)
 
-#### Convert Irradiation Data to PV Output Power
+### Convert Irradiation Data to PV Output Power
 In this section, we first describe how to model a single array PV System. The software also supports the configuration of split array systems. The necessary extensions are described in the next section.
 
 [pvlib](https://pvlib-python.readthedocs.io/en/stable/index.html) supports two modelling strategies for a PV system:
-1. model system with actual component parameters based on a `CEC` database provided with pvlib
-2. simplified `PVWatts` model
+* simplified `PVWatts` model
+* model system with actual component parameters based on a `CEC` database provided with pvlib
 
-Both approaches are supported and selected based on `Model`
+Both approaches are supported and selected based on `Model`, but `PVWatts` is simpler to configure:
+
+#### PVWatts Modelling
 ```
 [PVSystem]
-    # Model            = CEC      # modeling strategy for PV: 'CEC' or 'PVWatts' 
+    # Model            = PVWatts  # modeling strategy for PV: 'CEC' or 'PVWatts' 
     # TemperatureModel = open_rack_glass_glass
     # clearsky_model   = simplified_solis
-    
-    # --------------------------- physical definition of PV System, using CEC database
-    # based on .csv files at .../lib/python3.8/site-packages/pvlib/data, special characters to be replaced by '_'
-    ModuleName        = LG_Electronics_Inc__LG325N1W_V5
-    InverterName      = SMA_America__SB10000TL_US__240V_
-    NumStrings        =   2       # number of strings 
-    NumPanels         =  15       # number of panels per string
     
     # --------------------------- PVWatts definition
     InverterPower     = 10000     # name-plate inverter max. power
@@ -280,56 +360,41 @@ Both approaches are supported and selected based on `Model`
     SystemPower       =  9750     # system power [Wp]
     TemperatureCoeff  = -0.0036   # temperature coefficient (efficiency loss per 1C)
 ```
-The .csv are stored whereever pvlib installs on your system. This place can be found with
-`pip3 show pvlib` which returns something like:
-<pre>
-Name: pvlib
-Version: 0.8.1
-Summary: A set of functions and classes for simulating the performance of photovoltaic energy systems.
-Home-page: https://github.com/pvlib/pvlib-python
-Author: pvlib python Developers
-Author-email: None
-License: BSD 3-Clause
-Location: <b>installation_location</b>
-Requires: requests, scipy, numpy, pytz, pandas
-Required-by: 
-</pre>
 
-From this, you'll find in `installation_location/pvlib/data` two `.csv` files `sam-library-cec-inverters-2019-03-05.csv` and `sam-library-cec-modules-2019-03-05.csv` for inverters and modules respectively. The first column contain the names of supported inverters and modules. 
+The `PVWatts` model considers considerably less inefficiencies (~2.5%) than [PVWatts defaults](https://pvlib-python.readthedocs.io/en/stable/reference/pv_modeling/generated/pvlib.pvsystem.pvwatts_losses.html) (~14%):
 
-Special characters and blanks need replaced with `_` in the config file. Hence, eg. `SMA America: SB10000TL-US [240V]` becomes `SMA_America__SB10000TL_US__240V_`
+#### CEC Modelling
 
-If the (default) `CEC` approach is used, the selected model should at a minimum match the nameplate power of the installed panels (eg. 325Wp). The selected inverter is uncritical as long as the nameplate power is same or higher as installed inverter (eg. 10kW) - the modeling of inverters is relatively poor in pvlib, considering only a _NominalEfficency_.
+To use actual PV system component data, the `CEC` model must be used instead:
 
-The `PVWatts` model considers the following inefficiencies (which is less than [PVWatts defaults](https://pvlib-python.readthedocs.io/en/stable/generated/pvlib.pvsystem.pvwatts_losses.html?highlight=pvwatts_losses#pvlib.pvsystem.pvwatts_losses), which are meant to model monthly or annual output):
 ```
-    pvwatts_losses   = { 'soiling'          : 0,   
-                         'shading'          : 0, 
-                         'snow'             : 0, 
-                         'mismatch'         : 0, 
-                         'wiring'           : 2, 
-                         'connections'      : 0.5, 
-                         'lid'              : 0, 
-                         'nameplate_rating' : 0, 
-                         'age'              : 0, 
-                         'availability'     : 0 }
+[PVSystem]
+    Model            = CEC        # modeling strategy for PV: 'CEC' or 'PVWatts' 
+    # TemperatureModel = open_rack_glass_glass
+    # clearsky_model   = simplified_solis
+    
+    # --------------------------- physical definition of PV System, using CEC database
+    # based on .csv files at .../pvlib/data, special characters to be replaced by '_'
+    ModuleName        = LG_Electronics_Inc__LG325N1W_V5
+    InverterName      = SMA_America__SB10000TL_US__240V_
+    NumStrings        =   2       # number of strings 
+    NumPanels         =  15       # number of panels per string
 ```
 
-`pvlib` models panel temperature (and related efficiency loss) based on `TemperatureModel` and weather parameter `temp_air`.
+The location of the `pvlib` library can be determined with `python -m pip show pvlib`. The two `.csv` files `sam-library-cec-inverters-2019-03-05.csv` and `sam-library-cec-modules-2019-03-05.csv` list inverters and modules respectively. The first column contain the names of supported inverters and modules. Special characters and blanks need replaced with `_` in the config file. Hence, eg. `SMA America: SB10000TL-US [240V]` becomes `SMA_America__SB10000TL_US__240V_`
 
-`clearsky_model` is used for irradiation model `clearsky`. `ineichen` and `simplified_solis` are supported, `haurwitz` is not.
+The selected model should at a minimum match the nameplate power of the installed panels (eg. 325Wp). The selected inverter is uncritical as long as the nameplate power is same or higher as installed inverter (eg. 10kW) - the modeling of inverters is relatively poor in pvlib, considering only a _NominalEfficency_.
+
+`pvlib` models panel temperature (and related efficiency loss) based on `TemperatureModel` and weather parameter `temp_air`. `clearsky_model` is used for irradiation model `clearsky`. `ineichen` and `simplified_solis` are supported, `haurwitz` is not.
 
 Both models also need basic parameters of the system location and orientation:
 ```
-    Latitude          = 51.8
-    Longitude         =  6.1
-    Altitude          =  74       # altitude of system (above sea level)
+    # Latitude, Longitude, Altitude required, but typically taken from [Default] section
     Tilt              =  30
     Azimuth           = 127       # 270=West, 180=South, 90=East
 ```
-Since latitude and longitude parameters are also needed by [Solcast](#solcast-configuration) to calculate sunrise and sunset, it is efficient to put these two parameters into the `[Default]` section of the configuration file.
 
-#### Split Array System Configuration
+### Split Array System Configuration
 The above allows the definition of a _single array_ PV system. Split array systems (eg. with a west and east looking set of panels) can be configured as follows:
 ```
 [PVSystem]
@@ -350,7 +415,7 @@ Names of the sub-arrays are arbitrary - anything after the `_` serves as a suffi
 
 The secondary arrays (`[PVSystem_East]`, `[PVSystem_South]`, ...) inherit all settings from `[PVSystem]` except those which are explicitly overwritten. Typically, one wants to overwrite at least `Azimuth` and `Tilt`, likely also `NumStrings`, `NumPanels` and possibly panel types.
 
-PV output is calculated for each sub-array and creates parameters `dc_<irradiation_model>_<suffix>` and `ac_<irradiation_model>_<suffix>`. The parameter `storage` controls what is handed to the [data storage](#data-storage) module. Valid values are:
+PV output is calculated for each sub-array and creates parameters `dc_<irradiation_model>_<suffix>` and `ac_<irradiation_model>_<suffix>`. Parameters are added as columns to the same table a single-array PV system would have created. The parameter `storage` controls what is handed to the [data storage](#configuring-data-storage) module. Valid values are:
 
 Value | Function
 ------|---------
@@ -358,276 +423,120 @@ sum | **default**: only sum of all sub-arrays is stored (as `dc_/ac_<irradiation
 individual | only the individual sub-array results are stored, but sum is not calculated
 both | individual results and sum are stored
 
-### Data Storage
+## Configuring Data Storage
 Forecasting PV output power would be pointless, if the resulting data wouldn't be stored anywhere. The application supports three storage models:
 1. SQLite (file based relational database)
 2. Influx
 3. csv files
 
-The following configuration parameters control what is stored where and can be configured separately in sections `[SolCast], [OpenWeatherMap], [DWD]` or commonly in section `[Default]` (0 = disable, 1 = enable)
+The following configuration parameters control what is stored where and can be configured separately for each forecast provider or, more commonly, in section `[Default]` (0 = disable, 1 = enable)
 
 Parameter | Function 
 ----------|----------
 storeDB   | enable SQLite storage 
-storePath | storage location of SQlite database 
 storeInflux | enable Influx storage 
+storeCSV  | enable CSV file storage
+storePath | storage location of SQlite database and other files stored
 
-#### SQLite Storage
+Databases and tables are created dynamically. 
+* Tables are named per forecast data source. 
+* For [DWD](#dwd-configuration), table `dwd` contains data from `MOSMIX_L` and `dwd_s` from `MOSMIX_S`
+* [Entso-E](#entso-e-configuration) and [CO2signal](#co2signal-configuration) create a table for each zone, `entso_<zone>` and `co2signal_<zone>` respectively.
+
+_Influx_ stores a reduced set of data, aimed at displaying forecast data in a dashboard or similar. _SQLite_ is tailored to build a data repository useful for deeper analysis and learning.
+
+All times stored or reported are in UTC. All period time stamps are aligned to show the _periodEnd_. Hence, at times, data appears to be mis-aligned with directly downloaded data from the data source. This is because some sources report period timestamps as _periodStart_.
+
+### SQLite Storage
 ```
 [DBRepo]
     dbName  = pvforecasts.db      # SQLite database name (at 'storePath')
 ```
-An SQLite database is dynamically created with above defined name at `storePath`. It will contain a (subset of) the following tables, depending on what models have been calculated:
+An SQLite database is dynamically created with above defined name at `storePath` with name `dbName`. It is sufficient to remove the database to cause a re-creation of a fresh database. If the configuration is changed on an existing data, new tables are added dynamically. Fields which no longer exist are left empty. But new fields are _not_ added dynamically.
 
-Table | Content
-------|--------
-solcast | PV output power estimates from solcast
-visualcrossing | VisualCrossing parameters
-dwd   | MOSMIX_L parameters
-dwd_s | MOSMIX_S parameters
-owm   | OWM parameters
+The following features are only available in _SQLite_ storage:
+* All tables except `solcast` contain the minimum set of weather parameters as tabled [above](#convert-weather-data-to-irradiation-data). In addition, for each [irradiation model](#convert-irradiation-data-to-pv-output-power) enabled, GHI, DHI and DNI are stored alongside estimated PV ac and dc output power. These parameters may be multiplied depending on [split-array system configurations](#split-array-system-configuration) used.
 
-All tables except `solcast` contain the minimum set of weather parameters as tabled [above](#convert-weather-data-to-irradation-data). In addition, for each [irradiation model](#convert-irradiation-data-to-pv-output-power) enabled, GHI, DHI and DNI are stored alongside estimated PV ac and dc output power. These parameters may be multiplied depending on [splitarray system configurations](#split-array-system-configuration) used.
+* If the configuration parameter `dropWeather` is disabled (set to `0`), all (other) weather parameters of the forecast source are also stored, with their original names and units. By default (`dropWeather = 1`) only the [used parameters](#convert-weather-data-to-irradiation-data) are stored
 
-If the configuration parameter `dropWeather` is disabled (set to `0`), all (other) weather parameters of the forecast source are also stored, with their original names and units. By default (`dropWeather = 1`) only the [used parameters](#forecast-models) are stored
+* All tables contain `IssueTime` (when forecast was issued) and `PeriodEnd` (end time of forecast period). Date from previous `IssueTime` are not deleted to allow analysis of accuracy of forecasts over different forecast horizons. This makes the database grow quickly however!
 
-All tables contain `IssueTime` (when forecast was issued) and `PeriodEnd` (end time of forecast period). Date from previous `IssueTime` are not deleted to allow analysis of accuracy of forecasts over different forecast horizons.
+### Influx Storage
 
-Note that if the configuration file is changed on a running system, more or less data maybe calculated:
-* newly needed tables are created on-the-fly
-* dropped fields are simply left empty (which SQLite handles relatively efficiently)
-* however, new fields are not added dynamically - it is advised to drop the old database in such cases, which causes dynamic creation of a new one.
+_Influx_ contains a reduced set of data, compared to _SQLite_:
+
+* the last forecast overwrites any older forecast for a certain forecast time. That is, the _Influx_ database always contains the _current best knowledge_ about the forecasted parameter.
+* For modelled PV output power forecasts only contains DC power estimates, named `dc_<model>` for the [irradiance](#convert-weather-data-to-irradiation-data) model(s) calculated
+
+[Influx](https://www.influxdata.com/products/influxdb/) has undergone a major, largely not backward compatible upgrade between version 1.x and 2.x. However, both version are supported (though not in parallel). _Influx 1.x_ is out of maintenance since 2021. Hence, for new installations, it is suggested to move to _Influx 2.6_ or newer.
+
+#### Influx v2.x Storage
+Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
+```
+[Influx]
+    influx_V2       = 1              # enable Influx 2.x support (default is to use 1.x)
+    token           = <your token>
+    org             = <your org>
+    bucket          = <your bucket>  # fall-back: use key `database`
+```
+
+_Tables_ are called _buckets_ but largely serve the same purpose.
+Note that in Influx 2.x token based authentication is mandatory. Tokens can be [generated](https://docs.influxdata.com/influxdb/cloud/security/tokens/create-token/) in the Influx GUI.
 
 #### Influx v1.x Storage
 ```
 [Influx]
     host              = <your_hostname>         # default: localhost
     # port            = 8086
-    database          = <your_influx_db_name>   
+    database          = <your_influx_db_name>
+    # username        = root
+    # password        = root
+    # retention       = None                    # retention policy   
 ```
 
-This will create the following _measurements_ (akin tables) in the defined Influx database:
-Table | Content
-------|--------
-solcast | power estimates: `pv_estimate`, `pv_estimate10`, `pv_estimate90`
-owm     | DC power estimates from OpenWeatherMap, named `dc_<model>`
-pvsystem | DC power estimates from MOSMIX_L, named `dc_<model>`
-pvsystem_s | DC power estimates from MOSMIX_S, named `dc_<model>`
-forecast_log | log table on data downloads from [forecast sources](#forecast-sources) (this is required for internal purposes)
+_Tables_ are called _measurements_ but serve the same purpose.
 
-where `<model>` refers to one of the [irradiance](#convert-weather-data-to-irradation-data) models calculated. Depending on [split array system configurations](#split-array-system-configuration) used, these parameters may be multipled by array.
-
-The `database` must pre-exist in Influx. If it does not, the following manual operations can create it:
-```
-~ $ influx
-> show databases
-> create database <your_influx_db_name>
-> show databases
-> quit
-~ $
-```
 If authentication is required, optional `username` and `password` can be provided in the `[Influx]` config section. Default is `root` / `root` (as is the default for Influx 1.x). Authentication is *not* SSL encrypted though.
 
-We store only power output per forecast period in Influx (what is expected to be produced in any given forecast interval). It may be desireable to display cumulative data in [Grafana](https://grafana.com/), which is often used as a display front-end. This can be implemented through following queries (based on [this article](https://stackoverflow.com/questions/53711110/make-influxdb-grafana-cumulative-function-that-resets-daily-sawtooth-graph)):
+If the database is configured to support multiple retention policies, one for the _PVForecast_ data can be selected with `retention`. 
 
-**Residual output power for the rest of the day** (cumulative, from daily total down to zero)
-```
-SELECT round((dailyMax-cumSum)*100)/100 FROM
-  (SELECT cumulative_sum(sum("pv_estimate"))/2 as "dailyMax" from "solcast" WHERE $timeFilter group by time(1d)),
-  (SELECT cumulative_sum(sum("pv_estimate"))/2 as "cumSum" from "solcast" WHERE $timeFilter group by time(30m))
-fill(previous)
-```
-**Total output power for the day** (cumulative, from zero to daily total)
-```
-SELECT cumSum-dailyMax+Delta as Energy FROM
-  (SELECT cumulative_sum(sum("pv_estimate"))/2 as "dailyMax", difference(cumulative_sum(sum("pv_estimate")))/2 as Delta from "solcast" WHERE $timeFilter group by time(1d)),
-  (SELECT cumulative_sum(sum("pv_estimate"))/2 as "cumSum" from "solcast" WHERE $timeFilter group by time(:interval:))
-fill(previous)
-```
-
-#### Influx v2.x Storage
-Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
-```
-[Influx]
-    influx_V2       = 1              # enable Influx 2.x support
-    token           = <your token>
-    org             = <your org>
-    # optionally, the entry database can be named bucket. If not existent, the database is used
-    # to identify what is called the bucket in Influx v2.x
-    # bucket        = <your_influx_bucket_name>
-```
-
-Note that in Influx 2.x token based authentification is mandatory
-
-#### .csv File Storage
+### .csv File Storage
 `storeCSV = 1` store output in .csv files at `storePath`. This is mainly for debugging. 
 
-SolCast can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
+_SolCast_ can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
 
-### Solaranzeige Integration
-This application is designed to run seamlessly alongside [solaranzeige](https://solaranzeige.de). Hence, if installed on the same host, the `[Influx]` configuration section discussed in previous section may very well look like this:
-```
-[Influx]
-    # host            = localhost             # default: localhost
-    database          = solaranzeige   
-    power_field       = PV.Gesamtleistung
-```
-This will add the discussed _measurements_ to the `solaranzeige` database and make them immediatly available for display in Grafana.
 
-The `power_field` is dependent on the inverter: Most have either a field `Gesamtleistung` or `Leistung`, reflecting the PV DC power.
-
-## Installation
-Installation mainly ensures that all necessary python modules are available. We assume a Raspberry host here - although the instructions are probably quite generic.
-
-### The Basics
-It is assumed that Python 3.x is available and pandas, numpy installed. This can be checked with the following commands:
-```
-~ $ python3
->>> import pandas as pd
->>> import numpy as np
->>> pd.__version__
->>> np.__version__
->>> quit()
-~ $
-```
-
-If errors are seen, checkout [pandas installation instructions](https://pandas.pydata.org/pandas-docs/stable/getting_started/install.html) and use
-```
-sudo apt install python3-pandas
-```
-
-pandas versions from 1.1.2 and numpy  1.19.2 are known to work. Earlier versions might need an upgrade. Try the script and see what happens before you upgrade though. Some googling might be needed as on Raspberries the upgrade path is not always as linear.
-
-In case [Influx Storage](#influx-storage) is desired, but `Influx` is not yet available, installation instructions can be found [here](https://simonhearne.com/2020/pi-influx-grafana/)
-
-### Minimal Requirements
-```
-sudo pip3 install pysolcast                  # enables access to SolCast
-sudo pip3 install astral                     # provides sunrise, sunset
-sudo pip3 install influxdb                   # provides access to InfluxDB
-```
-**Note** Since approx. November 2022, SolCast defaults to 48h forecast period only. This can be [increased](#solcast-configuration) up to 14 days (336 hours), but requires `pysolcast` in v1.0.12 or newer. Unfortunatly, by default, `pysolcast` requests Python 3.9. If you are running an older version of Python, you can work around this with
-```
-sudo pip3 install pysolcast==1.0.12 --ignore-requires-python
-```
-
-With this we are able to run `SolCastLight.py`, which is limited to supporting Solcast as the only [forecast source](#forecast-sources)
-
-### Full Installation
-Other [forecast sources](#forecast-sources) require modelling a photovoltaic system, which is acheived using [pvlib](https://pvlib-python.readthedocs.io/en/stable/index.html). Unfortunatly, this library is not always straight forward to install - especially on 32-bit OS such as `Raspbian`. The default [install command]( https://pvlib-python.readthedocs.io/en/stable/installation.html)
-```
-sudo pip3 install pvlib[optional]
-```
-will likely fail - if it succeeds, you are the lucky guy. But what if not?
-
-Some parts of `pvlib` require `nrel-pysam`, which only runs on 64-bit versions of Python, which we don't have on `Raspbian` ... so we might get something like
-```
-Command "python setup.py egg_info" failed with error code 1 in /tmp/pip-install-7twe_oqh/nrel-pysam/
-```
-What worked for me was following instructions [here](https://raspberrypi.stackexchange.com/questions/104791/installing-netcdf4-on-raspberry-3b) and do:
-```
-sudo apt-get install libhdf5-dev
-sudo apt-get install libhdf5-serial-dev      # seems redundant, might be skipped
-sudo python3 -m pip install h5py
-sudo apt-get install netcdf-bin libnetcdf-dev
-sudo python3 -m pip install netcdf4          # take a while ...
-
-# siphon and tables are also needed by pvlib ...
-sudo pip3 install siphon
-sudo pip3 install tables
-# ... and now it should work
-sudo pip3 install pvlib
-```
-
-Finally, we might need (if not already installed by default) `elementpath` to handle `MOSMIX` .xml files:
-```
-sudo pip3 install elementpath
-sudo pip3 install beautifulsoup4
-```
-
-### Optional
-If [SQLite storage](#sqlite-storage) is configured, you'll end up with an SQLite database which you might want inspect. A great way (but by far not the only one) to do that is with [SQLite Browser](https://sqlitebrowser.org/)
-```
-sudo apt-get install sqlitebrowser
-```
-
-## Running the Script
-After downloading the script from Github, into a directory of your choosing (eg. `\home\pi\PV`), you should have these files (and some more):
-```
-./PVForecasts.py
-./SolCastLight.py
-./config.ini
-./solcast_light_config.ini
-./PVForecast/*.py        # approx. 9 .py files
-```
-
-* update the config file (`config.ini` or `solcast_light_config.ini`, depending which version you want to run
-* try it out ...: `python3 PVForecast.py` or `python3 SolCastLight.py`
-* install it in `cron`
-
-A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
-```
-*/15 * * * * cd /home/pi/PV && /usr/bin/python3 SolCastLight.py >> /home/pi/PV/err.txt 2>&1
-```
-which would run the script every 15min (recommended). 
-+ 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
-+ Replace `SolCastLight.py` with the `PVForecast.py` to run the full script.
-
-A great explanation of `cron` is [here](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
-
-**Note:** The script doesn't do much in terms of housekeeping (eg., limit size of SQLite database or `err.txt` file used above to redirect error messages).
-
-## To Do
-no pending tasks
-
-## Deprecated
-Following subjects have been deprecated by the data providers. They are still supported by `PVForecast` as some functionality still seems to work.
-
-### Solcast Tuning
-**Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
-
-```
-[SolCast]
-    post = 1
-```
-in the configuration file. But of course, it requires that such performance data is available locally.
-
-The script assumes that performance data is available in the same Influx database as configured for forecast data storage. Saying
-```
-[Influx]
-    database      = <your_influx_db_name>
-    power_field   = PV.Gesamtleistung
-    power_field_2 = PV.Leistung_Str_2
-```
-assumes that `<your_influx_db_name>` contains a measurement (table) `PV` with a field `Gesamtleistung` which has regular recordings of the PV generated power. 
-
-For split array configurations (allowed by SolCast since official deprecation of tuning), a secondary tuning field `power_field_2` can be defined. In posting, `power_field` will be associated with `resource_id` and `power_field_2` with `resource_id_2`. This still seems to work as of today (2021-03-21). See [Solcast Configuration](#solcast-configuration) on guidence for split array support.
-
-It is assumed that 
-* this field has at least a time resolution of 5 minutes or less
-* power is in W
-* Influx stores times internally always as UTC (this is not actually an assumption, rather a fact, which the application storing power data must be aware of)
-
-**Influx 2.0** is not supported for SolCast posting (this would need an update in `influx.py` for procedure `getPostData`)
-
-**Note, July 2022**: It appears that SolCast is still willing to receive data and appears to somehow react on it.
 
 ## Version History
+**v2.10.00**    2023-02-28
+If you plan to continue using only _SolCastLight_, there is no reason to update - but you miss out on the new capabilities on CO2 intensity forecast
++ [CO2 intensity forecast](CO2Intensity) added, see [Entso-E](#entso-e-configuration) and [CO2signal](#co2signal-configuration)
++ _SolCast_ interval can now be configured to `24h` - see [SolCast Configuration](#solcast-configuration). This solves [issue #15](https://github.com/StefaE/PVForecast/issues/15)
++ Installation simplified - if some libraries are not installed, _PVForecast_ behaves gracefully and only disables functionality which cannot be maintained. See [Installation](#installation)
++ it is no longer required to create Influx databases manually upfront
++ documentation (including [pages](https://stefae.github.io/PVForecast/)) reworked
++ bug fixes
+
+_Compatibility notes on v2.10.00_
+
++ `[Forecasts]` key `OWM` has been renamed to `OpenWeatherMap` for consistency reasons
++ default model changed from `CEC` to `PVWatts`, see [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
+
 **v2.01.00**    2022-12-03
 + solves [issue #14](https://github.com/StefaE/PVForecast/issues/14): [SolCast](#solcast-configuration) defaults to 48h, but accepts an `hours` parameter.
-+ Upgrade notice: for this to work, `pysolcast` version needs be v1.0.2 or higher; see [requirements](#minimal-requirements)
++ Upgrade notice: for this to work, `pysolcast` version needs be v1.0.2 or higher
 
 **v2.00.00**    2022-07-24
 + added [VisualCrossing](#visualcrossing-configuration) as new forecast source
 + added [File Input](#fileinput-configuration) as new forecast source, to simplify debugging
-+ [MOSMIX](#mosmix-configuration) cloud based models use parameter `Neff` (effective cloud coverage) instead of `N` (cloud coverage) for slightly improved accuracy.
-+ default [Irradiation model](#convert-weather-data-to-irradation-data) changed from `all` to `disc` (`clearsky_scaling` for cloud data)
++ [MOSMIX](#dwd-configuration) cloud based models use parameter `Neff` (effective cloud coverage) instead of `N` (cloud coverage) for slightly improved accuracy.
++ default [Irradiation model](#convert-weather-data-to-irradiation-data) changed from `all` to `disc` (`clearsky_scaling` for cloud data)
 + documentation improved
 + code refactoring: weather parameters are now renamed and converted to standard units in the respective source objects rather than `PVModel`
 
 _Compatibility notes on v2.00.00_
 
-There are no changes if you are using [SolcastLight](#solcastlight-minimalistic-installation) and hence, there is no reason to update. However, if the full version is used, the following changes apply:
+There are no changes if you are using _SolcastLight_ and hence, there is no reason to update. However, if the full version is used, the following changes apply:
 + changes to [Influx Storage](#influx-v1x-storage): Cloud based forecast fields have new (shorter) names. Influx will transparently add new fields, but long-term trends will get broken.
 + changes to [SQLite Storage](#sqlite-storage):
   + tables `dwd` and `pvsystem` are consolidated into `dwd`. Likewise, tables `dwd_s` and `pvsystem_s` are consolidated into `dwd_s`
@@ -637,7 +546,7 @@ There are no changes if you are using [SolcastLight](#solcastlight-minimalistic-
 As a consequence, if the [SQLite Storage](#sqlite-storage) model is used, the pre-existing database (referenced by `DBRepo.dbName`) has to be deleted, so that a new version, with new tables and fields, will automatically be re-created on first execution of the script.
 
 **v1.03.00**
-+ updatd readme file, fixing some documentation bugs
++ updated readme file, fixing some documentation bugs
 
 **v1.02.00**
 + [Influx 1.x](#influx-v1x-storage) now supports authentication
@@ -653,17 +562,17 @@ As a consequence, if the [SQLite Storage](#sqlite-storage) model is used, the pr
 
 v1.00.00    2021-02-06  initial public release
 
+### Deprecations
+* **Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
 
+* `SolCastLight` is deprecated (but still available). Use `python PVForecast.py -c solcast_light_config.ini` instead
 
 ## Acknowlegements
 Thanks to all who raised issues or helped in testing!
 
-## Disclaimer
-The software pulls weather data from various weather sources. It is the users responsability to adhere to the use conditions of these sources. 
+## License and Disclaimer
+Distributed under the terms of the [GNU General Public License v3](https://github.com/StefaE/PVForecast/blob/main/LICENSE)
 
-The author cannot provide any warranty concerning the availability, accessability or correctness of such weather data and/or the correct computation of derieved data for any specific use case or purpose.
+The software pulls data from various weather sources. It is the users responsibility to adhere to the use conditions of these sources. 
 
-Further warranty limitations are implied by the license
-
-## License
-Distributed under the terms of the GNU General Public License v3.
+The author cannot provide any warranty concerning the availability, accessability or correctness of such weather data and/or the correct computation of derived data for any specific use case or purpose. Further warranty limitations are implied by the license
