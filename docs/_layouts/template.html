@@ -14,7 +14,7 @@
       <h1 class="project-name">PVForecast - {{ page.title }}</h1>
       <h2 class="project-tagline">Rooftop PV Production and CO2 Intensity Forecast</h2>
     </section>
-		<section id="navbar">
+    <section id="navbar">
       {% assign mypages = site.pages | sort: "order" %}
       {% for mypage in mypages %}
         {% if page.title == mypage.title %}
@@ -25,7 +25,6 @@
       {% endfor %}
       <a href="https://github.com/StefaE/PVForecast" class="btn">View on GitHub</a>
     </section>
-
     <section class="main-content">
       
       {{ content }}
@@ -39,9 +38,9 @@
       </footer>
 
     </section>
-  </body>
+  </body>	
 
-	<script>
+  <script type=text/javascript>
 	window.onscroll = function() {myFunction()};
 
 	var navbar = document.getElementById("navbar");
@@ -54,6 +53,6 @@
 	    navbar.classList.remove("sticky");
 	  }
 	}
-	</script>
-	
+   </script>
+
 </html>
