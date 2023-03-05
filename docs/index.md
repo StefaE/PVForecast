@@ -12,8 +12,8 @@ Forecasts to optimize electricity consumption for rooftop PV (photo-voltaic) ins
 ## Table of Content
 
   - [Introduction](#introduction)
-  - [PV Production Output Forecasts <span style="color:#00B0F0"><b>new</b></span>](#pv-production-output-forecasts)
-  - [CO2 Intensity Forecast](#co2-intensity-forecast)
+  - [PV Production Output Forecasts](#pv-production-output-forecasts)
+  - [CO2 Intensity Forecast <span style="color:#00B0F0"><b>new</b></span>](#co2-intensity-forecast)
   - [Data Storage](#data-storage)
   - [Sister Projects](#sister-projects)
   - [License and Disclaimer](#license-and-disclaimer)
