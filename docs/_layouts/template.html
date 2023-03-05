@@ -10,11 +10,7 @@
     <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
   </head>
   <body>
-    <section class="page-header">
-      <h1 class="project-name">PVForecast - {{ page.title }}</h1>
-      <h2 class="project-tagline">Rooftop PV Production and CO2 Intensity Forecast</h2>
-    </section>
-		<section id="navbar">
+    <section id="navbar">
       {% assign mypages = site.pages | sort: "order" %}
       {% for mypage in mypages %}
         {% if page.title == mypage.title %}
@@ -24,6 +20,10 @@
   	    {% endif %}
       {% endfor %}
       <a href="https://github.com/StefaE/PVForecast" class="btn">View on GitHub</a>
+    </section>
+    <section class="page-header">
+      <h1 class="project-name">PVForecast - {{ page.title }}</h1>
+      <h2 class="project-tagline">Rooftop PV Production and CO2 Intensity Forecast</h2>
     </section>
 
     <section class="main-content">
@@ -39,21 +39,5 @@
       </footer>
 
     </section>
-  </body>
-
-	<script>
-	window.onscroll = function() {myFunction()};
-
-	var navbar = document.getElementById("navbar");
-	var sticky = navbar.offsetTop;
-
-	function myFunction() {
-	  if (window.pageYOffset >= sticky) {
-	    navbar.classList.add("sticky")
-	  } else {
-	    navbar.classList.remove("sticky");
-	  }
-	}
-	</script>
-	
+  </body>	
 </html>
