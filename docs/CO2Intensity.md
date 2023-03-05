@@ -99,7 +99,7 @@ The use of a deviation from a 40-day moving average filters out the impact of th
 
 The [CO2signal](README#co2signal-configuration) is available for the countries and regions shown on the [Electricity Maps map](https://app.electricitymaps.com/map). Unfortunatly, the free API does not provide forward looking data.
 
-The _Transparency Platform_ has data on Europe. We interface to it with [entsoe-py](README#co2signal-configuration) which lists 63 countries and control regions. But not all of these regions support all data types. [EntsoE_Zones.pdf](EntsoE_Zones.pdf) shows a snapshot of what was available in late December 2022:
+The _Transparency Platform_ has data on Europe. We interface to it with [entsoe-py](README#co2signal-configuration) which lists 63 countries and control regions. But not all of these regions support all data types. [EntsoE_Zones.pdf](https://github.com/StefaE/PVForecast/blob/main/docs/EntsoE_Zones.pdf) shows a snapshot of what was available in late December 2022:
 * the orange columns list which data types were available, and with what time interval
 * the green columns show what can be (and is) calculated with _PVForecast_:
 	+ %Generation is what we have been discussing above. _FULL_ means both _DayAhead_ and _IntraDay_ forecasts (at 18:00 and 08:00 Brussels respectively) are available
