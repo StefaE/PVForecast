@@ -3,6 +3,8 @@ electricityMaps github repository:
   https://github.com/electricitymaps/electricitymaps-contrib
   
 These files are made available under the GNU Affero General Public Licence v3.0 
-(https://github.com/electricitymaps/electricitymaps-contrib/blob/master/LICENSE.md) 
+(https://github.com/electricitymaps/electricitymaps-contrib/blob/master/LICENSE.md)
+
+The copyright on these files remains with the https://www.electricitymaps.com/ 
 
 --------------------------------------------------------------------------------
