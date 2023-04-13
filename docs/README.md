@@ -91,7 +91,7 @@ After downloading the script from Github, into a directory of your choosing (eg.
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecast.py >> /home/pi/PV/data/err.txt 2>&1
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecasts.py >> /home/pi/PV/data/err.txt 2>&1
 ```
 which would run the script every 15min 
 + 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
