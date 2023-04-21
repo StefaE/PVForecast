@@ -20,7 +20,6 @@ import requests
 import sys
 
 import pandas as pd
-import numpy  as np
 from pandas.api.types import is_numeric_dtype
 
 from .forecast import Forecast
@@ -60,7 +59,8 @@ class OWMForecast(Forecast):
             self.DataTable.rename(columns = {'temp': 'temp_air', 'dew_point': 'temp_dew'}, inplace=True)
             self.IssueTime     = str(datetime.fromtimestamp(req.json()['current']['dt'], timezone.utc))
             self.csvName       = 'owm_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
+            return(True)
 
         except Exception as e:
             print("getForecast_OWM: " + str(e))
-            sys.exit(1)
+            return(False)

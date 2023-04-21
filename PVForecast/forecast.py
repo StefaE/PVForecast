@@ -15,7 +15,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-import sys
 import pandas as pd
 
 class Forecast:
@@ -39,9 +38,8 @@ class Forecast:
 
             except Exception as e:
                 print("writeCSV: " + str(e))
-                sys.exit(1)
         else:
-            print("writeCSV: csvName or storePath not defined")
+            print("writeCSV: csvName or storePath not defined, file not written")
 
     def merge_PVSim(self, PV):
         self.DataTable    = pd.concat([self.DataTable, PV.DataTable], axis=1)

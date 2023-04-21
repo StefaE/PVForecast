@@ -332,6 +332,6 @@ class PVModel(Forecast):
                 pass
 
         except Exception as e:
-            print ("readKML: " + str(e))
+            print ("run_splitArray: " + str(e))
             sys.exit(1)
         

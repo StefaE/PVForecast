@@ -14,10 +14,12 @@ An extensive set of forecasts relevant to PV rooftop installations is supported:
 * <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
 	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
 	+ auction prices of grid electricity
+* v2.11: bug fixes
 
 <span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
-* v2.1 requires pvlib v0.9.0 or higher (for **full version only**); small changes to `config.ini` keys and defaults, `SolCastLight` is deprecated (but still works)
-* v2.0 contains some incompatible changes (for the **full version** only) - . For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
+* v2.11 sets default `apiCalls = 10` for [SolCast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
+* v2.10 requires pvlib v0.9.0 or higher (for **full version only**); small changes to `config.ini` keys and defaults, `SolCastLight` is deprecated (but still works)
+* v2.00 contains some incompatible changes (for the **full version** only) - . For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
 
 -------------
 ## Table of Content
@@ -91,7 +93,7 @@ After downloading the script from Github, into a directory of your choosing (eg.
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecasts.py >> /home/pi/PV/data/err.txt 2>&1
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecast.py >> /home/pi/PV/data/err.txt 2>&1
 ```
 which would run the script every 15min 
 + 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
@@ -172,25 +174,24 @@ Depending on the data source, various forecast algorithms are available. The con
     api_key           = <api_id_from_solcast.com>
     # interval        =  0        # interval at which SolCast is read (during daylight only)
     # hours           = 168       # forecast period defaults to 7 days, up to 14 days (336h)
-    # apiCalls        =  50       # number of API calls supported by SolCast   
-    # optimal         =  15       # optimal time interval to call SolCast, in minutes
+    # apiCalls        =  10       # number of API calls supported by SolCast (new default in v2.11.00)  
 ```
 
-[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residential rooftop PV installation of up to 1MWp and allows for up to 50 API calls/day. The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key. _SolCast_ also supports [dual array systems](https://articles.solcast.com.au/en/articles/2887438-how-do-i-create-a-multiple-azimuth-rooftop-solar-site) (eg., east/west) through a second `resource_id_2`.
+[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residential rooftop PV installation of up to 1MWp and allows for up to 10 API calls/day (legacy users may benefit from more credits and can set their entitlement with `apiCalls`). The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key. _SolCast_ also supports [dual array systems](https://articles.solcast.com.au/en/articles/2887438-how-do-i-create-a-multiple-azimuth-rooftop-solar-site) (eg., east/west) through a second `resource_id_2`.
 
-_SolCast_ directly provides a PV forecasts (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed. Forecasts are [updated every 15min](https://solcast.com/live-and-forecast) (for Eurasia). For other regions (Asia Pacific, Americas), `optimal` can be adapted accordingly
+_SolCast_ directly provides a PV forecasts (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed. Forecasts are [updated every 15min](https://solcast.com/live-and-forecast) (for Eurasia), but it is recommended to call _SolCast_ no more than every 30min.
 
 To stay within the limits of `apiCalls` per day, the script calls the API only between sunrise and sunset, except in the `24h` configuration below. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
 
 value | meaning
 ------|---------
 0     | **Default**: call API every 15min (single array) or 30min (dual-array). To not exceed maximum API calls, extend interval to 30min (60min) after sunrise and before sunset on long days. Hence, this provides most accurate (short-term) forecasts during mid-day.
-early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning
-late  | same as `0`, but all interval extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon
+early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning (this is not useful for `apiCalls < 25`)
+late  | same as `0`, but all interval extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon (this is not useful for `apiCalls < 25`)
 24h   | downloads over the full day, but intervals are longer than in the previous configuration
-number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minutes.
+number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minutes. It is the users responsability to stay within the limits of `apiCalls` supported by _SolCast_
 
-There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [above](#running-the-script)). It is suggested to configure `crontab` to run the script every 15 minutes.
+There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [above](#running-the-script)). It is suggested to configure `crontab` to run the script every 30min (for `apiCalls >=25`, every 15min is possible). The interested user can use the script `./debug/solcast_timeInterval.py` to learn how download intervals are calculated - self-study is required).
 
 Parameters `Latitude` and `Longitude` are only used to calculate daylight time. Defaults are for Frankfurt, Germany. (The _SolCast_ service has it's own location information, associated with the `api_key`.)
 
@@ -508,7 +509,18 @@ _SolCast_ can only store to csv files if at least one other storage model (SQlit
 
 
 ## Version History
+**v2.11.00**    2023-04-21
+Bug fixes
++ SolCast interval calculation fixed for low number of `apiCalls`
++ avoid exit, if some forcast providers cause errors (eg. _too many API calls_) - allow continuation with next forecast provider
++ other bug fixes
+
+_Compatibility notes on v2.11.00_
+
+_SolCast_ has changed number of allowed `apiCalls` per day to 10, but it appears that legacy users still can use their previous entitlements. The default value for `apiCalls` has changed, so that legacy users now need explicitly set their entitlement value.
+
 **v2.10.00**    2023-02-28
+
 If you plan to continue using only _SolCastLight_, there is no reason to update - but you miss out on the new capabilities on CO2 intensity forecast
 + [CO2 intensity forecast](CO2Intensity) added, see [Entso-E](#entso-e-configuration) and [CO2signal](#co2signal-configuration)
 + _SolCast_ interval can now be configured to `24h` - see [SolCast Configuration](#solcast-configuration). This solves [issue #15](https://github.com/StefaE/PVForecast/issues/15)

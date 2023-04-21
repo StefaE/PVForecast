@@ -123,26 +123,26 @@ class ForecastManager:
         storeCSV    = self.config['VisualCrossing'].getboolean('storeCSV')
         if storeDB or storeInflux or storeCSV:                                           # else there is no storage location ...    
             myWeather  = VisualCrossing(self.config)
-            myWeather.getForecast_VisualCrossing()
-            last_issue = datetime.fromtimestamp(0, timezone.utc)
-            if storeDB:     
-                myDB       = DBRepository(self.config)
-                last_issue = myDB.getLastIssueTime(myWeather.SQLTable)
-            if storeInflux: 
-                myInflux   = InfluxRepo(self.config)
-                last_issue = myInflux.getLastIssueTime(myWeather.SQLTable)
-            issue_time = datetime.fromisoformat(myWeather.IssueTime)
-            delta_t    = round((issue_time - last_issue).total_seconds()/60)             # elapsed time since last download
-            force      = self.config['VisualCrossing'].getboolean('force', False)        # force download - for debugging
-            if delta_t > 58 or force:                                                    # hourly data, allow 2min slack
-                myPV   = PVModel(self.config)
+            if myWeather.getForecast_VisualCrossing():
+                last_issue = datetime.fromtimestamp(0, timezone.utc)
+                if storeDB:
+                    myDB       = DBRepository(self.config)
+                    last_issue = myDB.getLastIssueTime(myWeather.SQLTable)
+                if storeInflux: 
+                    myInflux   = InfluxRepo(self.config)
+                    last_issue = myInflux.getLastIssueTime(myWeather.SQLTable)
+                issue_time = datetime.fromisoformat(myWeather.IssueTime)
+                delta_t    = round((issue_time - last_issue).total_seconds()/60)         # elapsed time since last download
+                force      = self.config['VisualCrossing'].getboolean('force', False)    # force download - for debugging
+                if delta_t > 58 or force:                                                # hourly data, allow 2min slack
+                    myPV   = PVModel(self.config)
 
-                model = self.config['VisualCrossing'].get('Irradiance', 'disc')
-                myPV.run_splitArray(myWeather, model)
-                myWeather.merge_PVSim(myPV)
-                if storeDB:     myDB.loadData(myWeather)
-                if storeInflux: myInflux.loadData(myWeather)
-                if storeCSV:    myWeather.writeCSV()
+                    model = self.config['VisualCrossing'].get('Irradiance', 'disc')
+                    myPV.run_splitArray(myWeather, model)
+                    myWeather.merge_PVSim(myPV)
+                    if storeDB:     myDB.loadData(myWeather)
+                    if storeInflux: myInflux.loadData(myWeather)
+                    if storeCSV:    myWeather.writeCSV()
         else:
             print("Warning - getting VisualCrossing data not supported without database storage enabled (storeDB, storeInflux or storeCSV)")
  
@@ -154,26 +154,26 @@ class ForecastManager:
         storeCSV    = self.config['OpenWeatherMap'].getboolean('storeCSV')
         if storeDB or storeInflux or storeCSV:                                           # else there is no storage location ...    
             myWeather = OWMForecast(self.config)
-            myWeather.getForecast_OWM()
-            last_issue = datetime.fromtimestamp(0, timezone.utc)
-            if storeDB:     
-                myDB       = DBRepository(self.config)
-                last_issue = myDB.getLastIssueTime(myWeather.SQLTable)
-            if storeInflux: 
-                myInflux   = InfluxRepo(self.config)
-                last_issue = myInflux.getLastIssueTime(myWeather.SQLTable)
-            issue_time = datetime.fromisoformat(myWeather.IssueTime)
-            delta_t    = round((issue_time - last_issue).total_seconds()/60)             # elapsed time since last download
-            force      = self.config['OpenWeatherMap'].getboolean('force', False)        # force download - for debugging
-            if delta_t > 58 or force:                                                    # hourly data, allow 2min slack
-                myPV   = PVModel(self.config)
+            if myWeather.getForecast_OWM():
+                last_issue = datetime.fromtimestamp(0, timezone.utc)
+                if storeDB:     
+                    myDB       = DBRepository(self.config)
+                    last_issue = myDB.getLastIssueTime(myWeather.SQLTable)
+                if storeInflux: 
+                    myInflux   = InfluxRepo(self.config)
+                    last_issue = myInflux.getLastIssueTime(myWeather.SQLTable)
+                issue_time = datetime.fromisoformat(myWeather.IssueTime)
+                delta_t    = round((issue_time - last_issue).total_seconds()/60)         # elapsed time since last download
+                force      = self.config['OpenWeatherMap'].getboolean('force', False)    # force download - for debugging
+                if delta_t > 58 or force:                                                # hourly data, allow 2min slack
+                    myPV   = PVModel(self.config)
 
-                model = self.config['OpenWeatherMap'].get('Irradiance', 'clearsky_scaling')
-                myPV.run_splitArray(myWeather, model)
-                myWeather.merge_PVSim(myPV)
-                if storeDB:     myDB.loadData(myWeather)
-                if storeInflux: myInflux.loadData(myWeather)
-                if storeCSV:    myWeather.writeCSV()
+                    model = self.config['OpenWeatherMap'].get('Irradiance', 'clearsky_scaling')
+                    myPV.run_splitArray(myWeather, model)
+                    myWeather.merge_PVSim(myPV)
+                    if storeDB:     myDB.loadData(myWeather)
+                    if storeInflux: myInflux.loadData(myWeather)
+                    if storeCSV:    myWeather.writeCSV()
         else:
             print("Warning - getting OpenWeatherMap data not supported without database storage enabled (storeDB, storeInflux or storeCSV)")
 

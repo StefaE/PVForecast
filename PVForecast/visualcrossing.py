@@ -19,7 +19,6 @@ import requests
 import sys
 
 import pandas as pd
-import numpy  as np
 
 from .forecast import Forecast
 
@@ -73,8 +72,9 @@ class VisualCrossing(Forecast):
             self.DataTable.index.name = 'PeriodEnd'
             self.IssueTime            = str(pd.to_datetime(self.IssueTime, unit='s', utc=True))
             self.csvName      = 'visualcrossing_' + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '.csv.gz'
-            return()
+            return(True)
             
         except Exception as e:
             print("getForecast_VisualCrossing: " + str(e))
-            sys.exit(1)
+            return(False)
+

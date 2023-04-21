@@ -80,7 +80,6 @@ class DWDForecast(Forecast):
 
         except Exception as e:
             print ("getForecast_DWD_L: " + str(e))
-            sys.exit(1)
 
     def getForecast_DWD_S(self):
         """Get newest MOSMIX_S forecast (global file), extract data for selected station; 
@@ -157,7 +156,6 @@ class DWDForecast(Forecast):
 
         except Exception as e:
             print ("getForecast_DWD_S: " + str(e))
-            sys.exit(1)
 
 
     def readKML(self, file):                                                             # read forecast from .kml file --> self.kml as XML elementtree
@@ -184,11 +182,9 @@ class DWDForecast(Forecast):
             self.kmlName  = re.sub(r'\.(zip|kml\.gz|kmz|xml)$', '.kml', file, re.IGNORECASE)
             self.kmlName = os.path.basename(self.kmlName)
             self.csvName = re.sub(r'\.kml$', '.csv.gz', self.kmlName)
-            return()
 
         except Exception as e:
             print ("readKML: " + str(e))
-            sys.exit(1)
 
     def parseKML(self):                                                                  # parse XML to pandas self.DataTable
         """Parse XML content of a MOSMIX .kml file"""
@@ -218,7 +214,7 @@ class DWDForecast(Forecast):
             
             except Exception as e:
                 print("parseKLM: " + str(e))
-                sys.exit(1)
+                success = False
 
         return(success)
 

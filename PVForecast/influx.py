@@ -220,4 +220,4 @@ class InfluxRepo:
             return(postDict)
         except Exception as e:
             print("getPostData: " + str(e))
-            sys.exit(1)
+            return(None)

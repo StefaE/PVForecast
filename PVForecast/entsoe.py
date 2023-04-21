@@ -49,7 +49,7 @@ class EntsoE(Forecast):
         config      configparser object with section [Entso-E]"""
         if not _entso_installed: 
             print('Error Entso-E: library entsoe not available')
-            exit()
+            sys.exit(1)
 
         super().__init__()
         self.config       = config
@@ -107,7 +107,7 @@ class EntsoE(Forecast):
             print('Entso-E Message: start = ' + str(self._start) + ', end = ' + str(self._end) + ', now = ' + str(self._now))
         if self._start > self._end:
             print('Entso-E Error: Incorrect time interval selected: start > end')
-            exit(1)
+            sys.exit(1)
 
         self._modelDays   = self.config['Entso-E'].get('modelDays', 7)
         if _scipy_installed:
@@ -358,13 +358,16 @@ class EntsoE(Forecast):
             for zone in self.zones:
                 history = myInflux.getData(start, f'entsoe_{zone}')
                 if history.shape[0] > MIN_ROWS:                                                    # we have enough data to start building model
-                    history = history[history.index < self._now.normalize()]
+                    if 'pctGenerated_DayAhead' in history.columns:
+                        history = history[history.index < self._now.normalize()]
+                    else:
+                        history = pd.DataFrame()                                                   # make sure it doesn't satisfy below IFs
                 if history.shape[0] > MIN_ROWS:
                     delta_t = history.index[1] - history.index[0]
                     history['periodStart_BRU']   = history.index
                     history['periodStart_BRU']   = history['periodStart_BRU'].dt.tz_convert('Europe/Brussels') - delta_t
                     history['pctGenerated_Best'] = history.apply (lambda row: row['pctGenerated_Intraday']
-                        if (not pd.isna(row['pctGenerated_Intraday']) and row['periodStart_BRU'].hour >= 8)
+                        if ('pctGenerated_Intraday' in row.index) and (not pd.isna(row['pctGenerated_Intraday']) and row['periodStart_BRU'].hour >= 8)
                         else row['pctGenerated_DayAhead'],
                         axis = 1)
                     history = history[['co2', 'pctGenerated_Best']]                                # to make .dropna not over-react
