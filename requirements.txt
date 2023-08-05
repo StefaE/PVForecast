@@ -31,4 +31,5 @@ scipy>=1.4.0
 netcdf4
 siphon
 # .. and finally pvlib
+packaging
 pvlib>=0.9.0

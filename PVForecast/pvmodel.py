@@ -19,6 +19,7 @@ import warnings
 _pvlib_installed = True
 try:
     import pvlib
+    from packaging import version
     from pvlib.pvsystem    import PVSystem
     from pvlib.location    import Location
     from pvlib.modelchain  import ModelChain
@@ -27,7 +28,7 @@ try:
         from pvlib.forecast    import ForecastModel
     from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
     from pvlib             import irradiance
-    if pvlib.__version__ < '0.9.0':
+    if version.parse(pvlib.__version__) < version.parse('0.9.0'):
         _pvlib_installed = False                                                         # we need at least 0.9.0
     pass
 except:
@@ -52,9 +53,9 @@ class PVModel(Forecast):
 
         try:
             self._pvversion = pvlib.__version__
-            if self._pvversion > '0.9.4':
+            if version.parse(self._pvversion) > version.parse('0.9.4'):
                 print("Warning --- pvmodel not tested with pvlib > 0.9.4")
-            elif self._pvversion < '0.9.0':
+            elif version.parse(self._pvversion) < version.parse('0.9.0'):
                 sys.tracebacklimit=0
                 raise Exception("ERROR --- require pvlib >= 0.9.0")
             super().__init__()
