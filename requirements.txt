@@ -25,11 +25,6 @@ influxdb_client
 entsoe-py>=0.5.9
 scipy>=1.4.0
 
-# following libraries are required for pvlib. They would be installed with
-# pvlib[optional], but that fails on Raspberries, since nrel-pysam (which would
-# then also be installed) requires a 64-bit version of Linus
-netcdf4
-siphon
 # .. and finally pvlib
 packaging
-pvlib>=0.9.0
+pvlib>=0.10.0
