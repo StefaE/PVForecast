@@ -23,9 +23,6 @@ try:
     from pvlib.pvsystem    import PVSystem
     from pvlib.location    import Location
     from pvlib.modelchain  import ModelChain
-    with warnings.catch_warnings():
-        warnings.filterwarnings('ignore', category=UserWarning, message=r'.*highly experimental.*')
-        from pvlib.forecast    import ForecastModel
     from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
     from pvlib             import irradiance
     if version.parse(pvlib.__version__) < version.parse('0.9.0'):
@@ -53,8 +50,8 @@ class PVModel(Forecast):
 
         try:
             self._pvversion = pvlib.__version__
-            if version.parse(self._pvversion) > version.parse('0.9.4'):
-                print("Warning --- pvmodel not tested with pvlib > 0.9.4")
+            if version.parse(self._pvversion) > version.parse('0.10.1'):
+                print("Warning --- pvmodel not tested with pvlib > 0.10.1")
             elif version.parse(self._pvversion) < version.parse('0.9.0'):
                 sys.tracebacklimit=0
                 raise Exception("ERROR --- require pvlib >= 0.9.0")
@@ -210,9 +207,8 @@ class PVModel(Forecast):
                 self.irradiance = self._location.get_clearsky(weatherData.index,         # calculate clearsky ghi, dni, dhi for clearsky
                                                               model=clearsky_model)
             elif (model == 'clearsky_scaling' or model == 'campbell_norman'):
-                fcModel = ForecastModel('dummy', 'dummy', 'dummy')                       # only needed to call methods below
-                fcModel.set_location(latitude=self._location.latitude, longitude=self._location.longitude, tz=self._location.tz)
-                self.irradiance = fcModel.cloud_cover_to_irradiance(weatherData['clouds'], how = model)
+                helper = _cloud_to_irrandiance(self._location)                       # only needed to call methods below
+                self.irradiance = helper.cloud_cover_to_irradiance(weatherData['clouds'], how = model)
             else:
                 sys.tracebacklimit=0
                 raise Exception("ERROR --- incorrect irradiance model called: " + model)
@@ -336,3 +332,205 @@ class PVModel(Forecast):
             print ("run_splitArray: " + str(e))
             sys.exit(1)
         
+# -------------------------------------------------------------------------------------- 
+"""
+The helper code below this line has been lifted out of pvlib v0.9.4 (https://github.com/pvlib)
+
+Reason for doing this is that as of pvlib v0.10.x the pvlib.forecast module deprecated.
+However, it contained (amongst many other things) the useful functionality to convert 
+cloud coverage to irradiance. To maintain this functionality for the purposes of this 
+module, the relevant methods are reproduced here.
+
+This part of the code is under the following licence and copyright holders
+(https://github.com/pvlib/pvlib-python/blob/main/LICENSE):
+
+    BSD 3-Clause License
+
+    Copyright (c) 2023 pvlib python Contributors
+    Copyright (c) 2014 PVLIB python Development Team
+    Copyright (c) 2013 Sandia National Laboratories
+
+    All rights reserved.
+"""
+
+class _cloud_to_irrandiance():
+    def __init__(self, location):
+        self.location = location
+
+    def cloud_cover_to_ghi_linear(self, cloud_cover, ghi_clear, offset=35,
+                                  **kwargs):
+        """
+        Convert cloud cover to GHI using a linear relationship.
+
+        0% cloud cover returns ghi_clear.
+
+        100% cloud cover returns offset*ghi_clear.
+
+        Parameters
+        ----------
+        cloud_cover: numeric
+            Cloud cover in %.
+        ghi_clear: numeric
+            GHI under clear sky conditions.
+        offset: numeric, default 35
+            Determines the minimum GHI.
+        kwargs
+            Not used.
+
+        Returns
+        -------
+        ghi: numeric
+            Estimated GHI.
+
+        References
+        ----------
+        Larson et. al. "Day-ahead forecasting of solar power output from
+        photovoltaic plants in the American Southwest" Renewable Energy
+        91, 11-20 (2016).
+        """
+
+        offset = offset / 100.
+        cloud_cover = cloud_cover / 100.
+        ghi = (offset + (1 - offset) * (1 - cloud_cover)) * ghi_clear
+        return ghi
+
+    def cloud_cover_to_irradiance_clearsky_scaling(self, cloud_cover,
+                                                   method='linear',
+                                                   **kwargs):
+        """
+        Estimates irradiance from cloud cover in the following steps:
+
+        1. Determine clear sky GHI using Ineichen model and
+           climatological turbidity.
+        2. Estimate cloudy sky GHI using a function of
+           cloud_cover e.g.
+           :py:meth:`~ForecastModel.cloud_cover_to_ghi_linear`
+        3. Estimate cloudy sky DNI using the DISC model.
+        4. Calculate DHI from DNI and GHI.
+
+        Parameters
+        ----------
+        cloud_cover : Series
+            Cloud cover in %.
+        method : str, default 'linear'
+            Method for converting cloud cover to GHI.
+            'linear' is currently the only option.
+        **kwargs
+            Passed to the method that does the conversion
+
+        Returns
+        -------
+        irrads : DataFrame
+            Estimated GHI, DNI, and DHI.
+        """
+        solpos = self.location.get_solarposition(cloud_cover.index)
+        cs = self.location.get_clearsky(cloud_cover.index, model='ineichen',
+                                        solar_position=solpos)
+
+        method = method.lower()
+        if method == 'linear':
+            ghi = self.cloud_cover_to_ghi_linear(cloud_cover, cs['ghi'],
+                                                 **kwargs)
+        else:
+            raise ValueError('invalid method argument')
+
+        dni = irradiance.disc(ghi, solpos['zenith'], cloud_cover.index)['dni']
+        dhi = ghi - dni * np.cos(np.radians(solpos['zenith']))
+
+        irrads = pd.DataFrame({'ghi': ghi, 'dni': dni, 'dhi': dhi}).fillna(0)
+        return irrads
+
+    def cloud_cover_to_transmittance_linear(self, cloud_cover, offset=0.75,
+                                            **kwargs):
+        """
+        Convert cloud cover (percentage) to atmospheric transmittance
+        using a linear model.
+
+        0% cloud cover returns "offset".
+
+        100% cloud cover returns 0.
+
+        Parameters
+        ----------
+        cloud_cover : numeric
+            Cloud cover in %.
+        offset : numeric, default 0.75
+            Determines the maximum transmittance. [unitless]
+        kwargs
+            Not used.
+
+        Returns
+        -------
+        transmittance : numeric
+            The fraction of extraterrestrial irradiance that reaches
+            the ground. [unitless]
+        """
+        transmittance = ((100.0 - cloud_cover) / 100.0) * offset
+
+        return transmittance
+
+    def cloud_cover_to_irradiance_campbell_norman(self, cloud_cover, **kwargs):
+        """
+        Estimates irradiance from cloud cover in the following steps:
+
+        1. Determine transmittance using a function of cloud cover e.g.
+           :py:meth:`~ForecastModel.cloud_cover_to_transmittance_linear`
+        2. Calculate GHI, DNI, DHI using the
+           :py:func:`pvlib.irradiance.campbell_norman` model
+
+        Parameters
+        ----------
+        cloud_cover : Series
+
+        Returns
+        -------
+        irradiance : DataFrame
+            Columns include ghi, dni, dhi
+        """
+        # in principle, get_solarposition could use the forecast
+        # pressure, temp, etc., but the cloud cover forecast is not
+        # accurate enough to justify using these minor corrections
+        solar_position = self.location.get_solarposition(cloud_cover.index)
+        dni_extra = irradiance.get_extra_radiation(cloud_cover.index)
+
+        transmittance = self.cloud_cover_to_transmittance_linear(cloud_cover,
+                                                                 **kwargs)
+
+        irrads = irradiance.campbell_norman(solar_position['apparent_zenith'],
+                                 transmittance, dni_extra=dni_extra)
+        irrads = irrads.fillna(0)
+
+        return irrads
+
+    def cloud_cover_to_irradiance(self, cloud_cover, how='clearsky_scaling',
+                                  **kwargs):
+        """
+        Convert cloud cover to irradiance. A wrapper method.
+
+        Parameters
+        ----------
+        cloud_cover : Series
+        how : str, default 'clearsky_scaling'
+            Selects the method for conversion. Can be one of
+            clearsky_scaling or campbell_norman. Method liujordan is
+            deprecated.
+        **kwargs
+            Passed to the selected method.
+
+        Returns
+        -------
+        irradiance : DataFrame
+            Columns include ghi, dni, dhi
+        """
+
+        how = how.lower()
+        if how == 'clearsky_scaling':
+            irrads = self.cloud_cover_to_irradiance_clearsky_scaling(
+                cloud_cover, **kwargs)
+        elif how == 'campbell_norman':
+            irrads = self.cloud_cover_to_irradiance_campbell_norman(
+                cloud_cover, **kwargs)
+        else:
+            raise ValueError('invalid how argument')
+
+        return irrads    
