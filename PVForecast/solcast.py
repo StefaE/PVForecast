@@ -51,7 +51,7 @@ class SolCast(Forecast):
             elif interval == '24h':   self._interval = -3
             else:                     self._interval =  0                                # call often over mid-day
         self._db           = None                                                        # DBRepository object once DB is opened
-        self._storeDB      = self.config['SolCast'].getboolean('storeDB', 0)             # ... store to DB
+        self._storeDB      = self.config['SolCast'].getboolean('storeDB', False)         # ... store to DB
         self._storeInflux  = self.config['SolCast'].getboolean('storeInflux')            # ... store to Influx (one of the two must be true to make sense to get data from solcast)
         self._storeCSV     = self.config['SolCast'].getboolean('storeCSV')               # ... store to csv in storePath
         self.storePath     = self.config['SolCast'].get('storePath')
@@ -166,7 +166,7 @@ class SolCast(Forecast):
                 if self._storeDB: self._db.loadData(self)                                    # store data in repository, db was opened in self._doDownload()
                 if self.config['SolCast'].getboolean('storeInflux'):
                     self._influx.loadData(self)                                              # store data to Influx, client was opened in self._doDownload()
-                    if self.config['SolCast'].getboolean('post', 0):
+                    if self.config['SolCast'].getboolean('post', False):
                         power_fields  = ['power_field', 'power_field_2']
                         for field in power_fields:
                             if field == 'power_field_2': suffix = '_2'

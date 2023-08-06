@@ -13,9 +13,10 @@ pandas>=1.4.0
 # it is recommended that only one Influx version is used.
 #
 #    if Influx <= 1.8 is used
-influxdb
-#    if Influx >= 2.0 is used
+influxdb>=5.3.1
+#    if Influx 2.x is used
 influxdb_client
+#    Influx 3.x not supported
 
 # following libraries are - depending on OS - more difficult to install. That's why
 # they "protected": If they are not present, the application behaves gracefully:
@@ -25,11 +26,6 @@ influxdb_client
 entsoe-py>=0.5.9
 scipy>=1.4.0
 
-# following libraries are required for pvlib. They would be installed with
-# pvlib[optional], but that fails on Raspberries, since nrel-pysam (which would
-# then also be installed) requires a 64-bit version of Linus
-netcdf4
-siphon
 # .. and finally pvlib
 packaging
-pvlib>=0.9.0
+pvlib>=0.10.0

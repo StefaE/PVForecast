@@ -86,7 +86,7 @@ class ForecastManager:
             myWeather.merge_PVSim(myPV)                                                  # merge stripped-down weather data and forecast
 
             #--------------------------------------------------------------------------- CSV storage
-            if (self.config['DWD'].getboolean('storeCSV', 0)):                           # store full weather data to .csv
+            if (self.config['DWD'].getboolean('storeCSV', False)):                       # store full weather data to .csv
                 myWeather.writeCSV()
 
             #--------------------------------------------------------------------------- SQLite storage

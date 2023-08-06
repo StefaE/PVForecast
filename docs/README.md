@@ -14,7 +14,7 @@ An extensive set of forecasts relevant to PV rooftop installations is supported:
 * <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
 	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
 	+ auction prices of grid electricity
-* v2.11, v2.11.01: bug fixes
+* v2.11, v2.11.02: bug fixes
 
 <span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
 * v2.11 sets default `apiCalls = 10` for [SolCast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
@@ -469,7 +469,7 @@ _Influx_ contains a reduced set of data, compared to _SQLite_:
 * the last forecast overwrites any older forecast for a certain forecast time. That is, the _Influx_ database always contains the _current best knowledge_ about the forecasted parameter.
 * For modelled PV output power forecasts only contains DC power estimates, named `dc_<model>` for the [irradiance](#convert-weather-data-to-irradiation-data) model(s) calculated
 
-[Influx](https://www.influxdata.com/products/influxdb/) has undergone a major, largely not backward compatible upgrade between version 1.x and 2.x. However, both version are supported (though not in parallel). _Influx 1.x_ is out of maintenance since 2021. Hence, for new installations, it is suggested to move to _Influx 2.6_ or newer.
+[Influx](https://www.influxdata.com/products/influxdb/) has undergone a major, largely not backward compatible upgrade between version 1.x and 2.x. However, both version are supported (though not in parallel). _Influx 1.x_ is out of maintenance since 2021. Hence, for new installations, it is suggested to move to _Influx 2.6_ or newer. Influx 3.x is not supported however.
 
 #### Influx v2.x Storage
 Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
@@ -509,9 +509,12 @@ _SolCast_ can only store to csv files if at least one other storage model (SQlit
 
 
 ## Version History
-**v2.11.01**    2023-08-05
+**v2.11.02**    2023-08-06
 Bug fix
 + proper version checking of pvlib (`pip install packaging` might be needed) 
++ moved `pvlib` code for `cloud_to_irradiance` to pvmodel.py (pvlib deprecated [pvlib.forecast](https://pvlib-python.readthedocs.io/en/stable/whatsnew.html?highlight=history#v0-10-0-june-30-2023))
++ suppressed warnings in `pvlib` related to np.exp overflow
++ v2.11.01 recalled - fix was insufficient
 
 **v2.11.00**    2023-04-21
 Bug fixes
