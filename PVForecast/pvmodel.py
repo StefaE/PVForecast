@@ -52,6 +52,7 @@ class PVModel(Forecast):
                     <section> defaults to 'PVSystem'"""
 
         try:
+            warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*overflow.*")
             self._pvversion = pvlib.__version__
             if version.parse(self._pvversion) > version.parse('0.10.1'):
                 print("Warning --- pvmodel not tested with pvlib > 0.10.1")
@@ -190,15 +191,13 @@ class PVModel(Forecast):
                 else:
                     clearsky = self._location.get_clearsky(weatherData.index,            # calculate clearsky ghi, dni, dhi for times
                                                            model='ineichen')
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        dni  = pvlib.irradiance.dirindex(ghi          = ghi,             # returns array
-                                                         ghi_clearsky = clearsky['ghi'],
-                                                         dni_clearsky = clearsky['dni'],
-                                                         zenith       = solar_position['zenith'],
-                                                         times        = weatherData.index,
-                                                         pressure     = weatherData['pressure'],
-                                                         temp_dew     = weatherData['temp_dew'] - 273.15)
+                    dni  = pvlib.irradiance.dirindex(ghi          = ghi,                 # returns array
+                                                     ghi_clearsky = clearsky['ghi'],
+                                                     dni_clearsky = clearsky['dni'],
+                                                     zenith       = solar_position['zenith'],
+                                                     times        = weatherData.index,
+                                                     pressure     = weatherData['pressure'],
+                                                     temp_dew     = weatherData['temp_dew'] - 273.15)
                 dhi = ghi - dni*cosSZA
             elif (model == 'erbs'):
                 erbs = pvlib.irradiance.erbs(ghi             = ghi,                  # returns dataframe with columns ['dni', 'dhi', 'kt']

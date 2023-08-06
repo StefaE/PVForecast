@@ -14,7 +14,7 @@ An extensive set of forecasts relevant to PV rooftop installations is supported:
 * <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
 	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
 	+ auction prices of grid electricity
-* v2.11, v2.11.01: bug fixes
+* v2.11, v2.11.02: bug fixes
 
 <span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
 * v2.11 sets default `apiCalls = 10` for [SolCast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
@@ -509,9 +509,12 @@ _SolCast_ can only store to csv files if at least one other storage model (SQlit
 
 
 ## Version History
-**v2.11.01**    2023-08-05
+**v2.11.02**    2023-08-06
 Bug fix
 + proper version checking of pvlib (`pip install packaging` might be needed) 
++ moved `pvlib` code for `cloud_to_irradiance` to pvmodel.py (pvlib deprecated [pvlib.forecast](https://pvlib-python.readthedocs.io/en/stable/whatsnew.html?highlight=history#v0-10-0-june-30-2023))
++ suppressed warnings from `dirindex` irradiance model
++ v2.11.01 recalled - fix was insufficient
 
 **v2.11.00**    2023-04-21
 Bug fixes
