@@ -469,7 +469,7 @@ _Influx_ contains a reduced set of data, compared to _SQLite_:
 * the last forecast overwrites any older forecast for a certain forecast time. That is, the _Influx_ database always contains the _current best knowledge_ about the forecasted parameter.
 * For modelled PV output power forecasts only contains DC power estimates, named `dc_<model>` for the [irradiance](#convert-weather-data-to-irradiation-data) model(s) calculated
 
-[Influx](https://www.influxdata.com/products/influxdb/) has undergone a major, largely not backward compatible upgrade between version 1.x and 2.x. However, both version are supported (though not in parallel). _Influx 1.x_ is out of maintenance since 2021. Hence, for new installations, it is suggested to move to _Influx 2.6_ or newer.
+[Influx](https://www.influxdata.com/products/influxdb/) has undergone a major, largely not backward compatible upgrade between version 1.x and 2.x. However, both version are supported (though not in parallel). _Influx 1.x_ is out of maintenance since 2021. Hence, for new installations, it is suggested to move to _Influx 2.6_ or newer. Influx 3.x is not supported however.
 
 #### Influx v2.x Storage
 Instead of Influx v1.x storage, Influx v2.x can be used. For this to work, the config file section must adhere to the following:
@@ -513,7 +513,7 @@ _SolCast_ can only store to csv files if at least one other storage model (SQlit
 Bug fix
 + proper version checking of pvlib (`pip install packaging` might be needed) 
 + moved `pvlib` code for `cloud_to_irradiance` to pvmodel.py (pvlib deprecated [pvlib.forecast](https://pvlib-python.readthedocs.io/en/stable/whatsnew.html?highlight=history#v0-10-0-june-30-2023))
-+ suppressed warnings from `dirindex` irradiance model
++ suppressed warnings in `pvlib` related to np.exp overflow
 + v2.11.01 recalled - fix was insufficient
 
 **v2.11.00**    2023-04-21
