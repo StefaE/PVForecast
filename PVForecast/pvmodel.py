@@ -19,7 +19,10 @@ import warnings
 _pvlib_installed = True
 try:
     import pvlib
-    from packaging import version
+    try:
+        from packaging import version
+    except:
+        print("ERROR --- library 'packaging' missing; run 'pip install packaging'")
     from pvlib.pvsystem    import PVSystem
     from pvlib.location    import Location
     from pvlib.modelchain  import ModelChain
@@ -187,13 +190,15 @@ class PVModel(Forecast):
                 else:
                     clearsky = self._location.get_clearsky(weatherData.index,            # calculate clearsky ghi, dni, dhi for times
                                                            model='ineichen')
-                    dni  = pvlib.irradiance.dirindex(ghi          = ghi,                 # returns array
-                                                     ghi_clearsky = clearsky['ghi'],
-                                                     dni_clearsky = clearsky['dni'],
-                                                     zenith       = solar_position['zenith'],
-                                                     times        = weatherData.index,
-                                                     pressure     = weatherData['pressure'],
-                                                     temp_dew     = weatherData['temp_dew'] - 273.15)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        dni  = pvlib.irradiance.dirindex(ghi          = ghi,             # returns array
+                                                         ghi_clearsky = clearsky['ghi'],
+                                                         dni_clearsky = clearsky['dni'],
+                                                         zenith       = solar_position['zenith'],
+                                                         times        = weatherData.index,
+                                                         pressure     = weatherData['pressure'],
+                                                         temp_dew     = weatherData['temp_dew'] - 273.15)
                 dhi = ghi - dni*cosSZA
             elif (model == 'erbs'):
                 erbs = pvlib.irradiance.erbs(ghi             = ghi,                  # returns dataframe with columns ['dni', 'dhi', 'kt']
