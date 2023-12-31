@@ -43,15 +43,17 @@ class InfluxRepo:
         if 'Influx' not in self.config.sections():
             sys.tracebacklimit=0
             raise Exception("missing section 'Influx' in config file")
-        self._host      = self.config['Influx'].get('host', 'localhost')
-        self._port      = self.config['Influx'].getint('port', 8086)
-        self._database  = self.config['Influx'].get('database', None)
-        self._retention = self.config['Influx'].get('retention', None)                   # retention policy (only for Influx v1.x)
-        self._username  = self.config['Influx'].get('username', 'root')
-        self._password  = self.config['Influx'].get('password', 'root')
-        self._token     = self.config['Influx'].get('token', None)
-        self._org       = self.config['Influx'].get('org', None)
-        self._influx_V2 = self.config['Influx'].getboolean('influx_v2', False)
+        self._host         = self.config['Influx'].get('host', 'localhost')
+        self._posthost     = self.config['Influx'].get('post_host', self._host)
+        self._port         = self.config['Influx'].getint('port', 8086)
+        self._database     = self.config['Influx'].get('database', None)
+        self._postdatabase = self.config['Influx'].get('post_database', self._database)
+        self._retention    = self.config['Influx'].get('retention', None)                # retention policy (only for Influx v1.x)
+        self._username     = self.config['Influx'].get('username', 'root')
+        self._password     = self.config['Influx'].get('password', 'root')
+        self._token        = self.config['Influx'].get('token', None)
+        self._org          = self.config['Influx'].get('org', None)
+        self._influx_V2    = self.config['Influx'].getboolean('influx_v2', False)
         try:
             if self._influx_V2:
                 if self._database is None: self._database = self.config['Influx'].get('bucket')
@@ -165,7 +167,7 @@ class InfluxRepo:
             return history
 
         except Exception as e:
-            print("getData: " + str(e))
+            print("Warning - getData: " + str(e))
             return pd.DataFrame()
 
     def _verifyDB(self, client):
@@ -198,8 +200,7 @@ class InfluxRepo:
 
             meas, field = self.config['Influx'].get(power_field).split('.')
 
-            # client      = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
-            client      = InfluxDBClient(host='solaranzeige', port=self._port, database='solaranzeige', username=self._username, password=self._password)            # <=================================
+            client      = InfluxDBClient(host=self._posthost, port=self._port, database=self._postdatabase, username=self._username, password=self._password)
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []
@@ -219,5 +220,5 @@ class InfluxRepo:
             else:                 postDict = None
             return(postDict)
         except Exception as e:
-            print("getPostData: " + str(e))
+            print("Warning - getPostData: " + str(e))
             return(None)

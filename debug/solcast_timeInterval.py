@@ -15,19 +15,21 @@ from math              import floor
 location     = LocationInfo('na', 'na', 'UTC', latitude=50.2, longitude=8.7)      # Frankfurt: 50.2N / 8.7E
 day          = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)                 # day, from which to run
 
-DAYS         = 365                                                                # number of days to run (more verbpose output if DAYS = 1)
+DAYS         = 365                                                                # number of days to run (more verbose output if DAYS = 1)
 INTERVAL     =   0                                                                # interval used (as in solcast.py: 0 .. -3)
 apiCalls     =  10                                                                # available API credits
 isDualArray  = True                                                               # whether we have a dual-array config
-if isDualArray:
-    apiCalls = apiCalls/2
 # --------------------------------------------------------------------------- End of User Input
+
+if isDualArray:
+    apiCalls = floor(apiCalls/2)
 
 if apiCalls > 24: DELTAMIN = 15
 else:             DELTAMIN = 30
 
 credits_used = []
 allSteps     = []
+tot_used     =  0
 for i in range(DAYS):
     now_utc = day
     
@@ -74,7 +76,7 @@ for i in range(DAYS):
             if delta_t > interval - 2:
                 n = n + 1
                 if DAYS == 1:
-                    print(n, " -- ", now_utc, "; ", delta_t)
+                    print(n, " -- ", now_utc, "; delta_t = ", delta_t)
                 if delta_t < 1440: stepSize.append(delta_t)
                 last_issue = now_utc
     print("day: ", day.date(), " nCalls= ", n, " Intervals used: ", set(stepSize))
@@ -82,8 +84,9 @@ for i in range(DAYS):
     credits_used.append(n)
     if n > apiCalls:
         print("----------------------- ERROR --- ", day)
+    tot_used += n
     day     = day + timedelta(days=1)
 
 print("--- overall run summary")
-print("credits used: ", set(credits_used))
+print("credits used: ", set(credits_used), " total = ", tot_used)
 print("all steps: ", set(allSteps))

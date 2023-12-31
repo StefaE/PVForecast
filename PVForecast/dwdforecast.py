@@ -79,7 +79,7 @@ class DWDForecast(Forecast):
             self.csvName = re.sub(r'\.kml$', '.csv.gz', self.kmlName)
 
         except Exception as e:
-            print ("getForecast_DWD_L: " + str(e))
+            print ("Warning - getForecast_DWD_L: " + str(e))
 
     def getForecast_DWD_S(self):
         """Get newest MOSMIX_S forecast (global file), extract data for selected station; 
@@ -155,7 +155,7 @@ class DWDForecast(Forecast):
                         gzfile.close()
 
         except Exception as e:
-            print ("getForecast_DWD_S: " + str(e))
+            print ("Warning - getForecast_DWD_S: " + str(e))
 
 
     def readKML(self, file):                                                             # read forecast from .kml file --> self.kml as XML elementtree

@@ -278,6 +278,23 @@ class ForecastManager:
                 sys.tracebacklimit=0
                 raise Exception("processFileInput: type '" + type + "' unsupported")
         return()
+    
+    def processMethod(self, m):
+        try:
+            print('processing ' + m)
+            if   m == 'MOSMIX_L':       self.processDWDFile('L')     # gets latest forecast (MOSMIX_L - DWD)
+            elif m == 'MOSMIX_S':       self.processDWDFile('S')     # gets latest forecast (MOSMIX_S - DWD)
+            elif m == 'SolCast':        self.processSolCast()        # get / post solcast
+            elif m == 'VisualCrossing': self.processVisualCrossing() # get VisualCrossing data
+            elif m == 'OpenWeatherMap': self.processOpenWeather()    # get OpenWeatherMap data
+            elif m == 'Entso-E':        self.processEntsoE()         # Entso-E based CO2 forecast
+            elif m == 'CO2signal':      self.processCO2signal()      # CO2signal from electricityMaps.com
+            elif m == 'FileInput':      self.processFileInput()      # process file input
+        except SystemExit as e:
+            print('Terminating in method ' + m + '; review config file to fix error, or report issue on Github')
+            sys.exit(1)
+        except Exception as e:
+            print('Error - Method ' + m + ': ' + str(e))            
 
     def runForecasts(self):
         methods = ['MOSMIX_L', 'MOSMIX_S', 'SolCast', 'VisualCrossing', 'OpenWeatherMap', 'Entso-E', 'CO2signal', 'FileInput']
@@ -302,11 +319,5 @@ class ForecastManager:
             print("Error: no data providers selected in config file")
             sys.exit(1)
 
-        if 'MOSMIX_L'       in runList: self.processDWDFile('L')     # gets latest forecast (MOSMIX_L - DWD)
-        if 'MOSMIX_S'       in runList: self.processDWDFile('S')     # gets latest forecast (MOSMIX_S - DWD)
-        if 'SolCast'        in runList: self.processSolCast()        # get / post solcast
-        if 'VisualCrossing' in runList: self.processVisualCrossing() # get VisualCrossing data
-        if 'OpenWeatherMap' in runList: self.processOpenWeather()    # get OpenWeatherMap data
-        if 'Entso-E'        in runList: self.processEntsoE()         # Entso-E based CO2 forecast
-        if 'CO2signal'      in runList: self.processCO2signal()      # CO2signal from electricityMaps.com
-        if 'FileInput'      in runList: self.processFileInput()      # process file input
+        for m in runList:
+            self.processMethod(m)

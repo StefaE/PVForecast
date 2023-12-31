@@ -72,7 +72,7 @@ class SolCast(Forecast):
         mySun          = sun(location.observer, date=now_utc)
         daylight_min = (mySun['sunset'] - mySun['sunrise']).total_seconds()/60
         retVal         = False
-        if self._force or self._interval == -3 or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
+        if self._force or self._interval == -3 or self._interval > 0 or (now_utc > mySun['sunrise'] and now_utc < mySun['sunset']):    # storeDB enabled, SolCast enabled, daylight
             if self._storeDB or self._storeInflux:
                 if self._storeDB:
                     self._db        = DBRepository(self.config)
@@ -95,8 +95,8 @@ class SolCast(Forecast):
                         want_min = daylight_min/self._apiCalls
                         optimal = tick*floor(want_min/tick)
                         if optimal == 0: optimal = tick
-                    need = int((int(daylight_min)+1)/optimal)+1     # number of 'optimal' minute intervals between sunrise and sunset
-                    long = need - self._apiCalls                                                                         # number of times where we can only call at longer intervals
+                    need = int((int(daylight_min)+1)/optimal)+1                                                        # number of 'optimal' minute intervals between sunrise and sunset
+                    long = need - self._apiCalls                                                                       # number of times where we can only call at longer intervals
 
                     if   self._interval ==  0 and ((now_utc - mySun['sunrise']).total_seconds()/60 < long*optimal or (mySun['sunset'] - now_utc).total_seconds()/60 < long*optimal):
                         interval = optimal*2
@@ -110,10 +110,17 @@ class SolCast(Forecast):
                         interval = optimal
                     if delta_t > interval - 2:
                         retVal = True
+                    else:
+                        nextDL = now_utc + timedelta(minutes= interval - delta_t)
+                        if (nextDL > mySun['sunset']):
+                            nextDL = mySun['sunrise'] + timedelta(days=1)
+                        print("Message - SolCast download inhibted to preserve credits; next DL planned after (UTC): " + nextDL.strftime("%Y-%m-%d, %H:%M:%S"))
                 if retVal:
                     print("Message - downloading SolCast data at (UTC): " + str(now_utc))
             else:
                 print("Warning --- getting SolCast data not supported without database storage enabled (storeDB or storeInflux)")
+        else:
+            print("Message - SolCast download inhibted between sunset and sunrise (see 'interval' parameter)")
         return(retVal)
 
     def getSolCast(self):
@@ -126,7 +133,7 @@ class SolCast(Forecast):
                     forecasts_2 = self._getSolCast(self._site_2, {'hours':hours})
                 hasData = True
             except Exception as e:
-                print ("getSolCast: " + str(e))
+                print ("Warning - getSolCast: " + str(e))
 
             # --------- debugging begin
             #myFile    = open('./temp/forecasts_01', 'wb')                               # store forecast to file for later debugging runs 
@@ -143,7 +150,7 @@ class SolCast(Forecast):
             if hasData:
                 df                  = pd.DataFrame(forecasts_1['forecasts'])
                 df                  = df.set_index('period_end')
-                period              = df['period'][0]
+                period              = df['period'].iloc[0]
                 df.drop('period', axis=1, inplace=True)
                 if self._site_2 is not None:
                     cols            = list(df)
@@ -187,7 +194,7 @@ class SolCast(Forecast):
                                         if suffix == '_2': self._site_2.post_measurements(self.postDict)
                                         else:              self._site.post_measurements(self.postDict)
                                     except Exception as e:
-                                        print ("getSolCast/post: " + str(e))
+                                        print ("Warning - getSolCast/post: " + str(e))
                                 else:
                                     print("Warning --- posting attempted without config file entry [Influx].[power_field]")
                 if self._storeDB: 

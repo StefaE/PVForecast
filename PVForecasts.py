@@ -22,6 +22,7 @@ specify a different file.
 import argparse
 from datetime import datetime
 from PVForecast.forecast_manager import ForecastManager
+from PVForecast.__init__ import __version__
 
 if __name__ == "__main__":
     cfgParser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     args = cfgParser.parse_args()
     if args.cfg: cfgFile = args.cfg
     else:        cfgFile = 'config.ini'
-    print("------------------------- Start (" + cfgFile + " at " + datetime.now().strftime("%Y-%m-%d, %H:%M:%S") + " - local)")
+    print("--v" + __version__ + "-"*(22 - len(__version__)) + " Start (" + cfgFile + " at " + datetime.now().strftime("%Y-%m-%d, %H:%M:%S") + " - local)")
     myForecastManager = ForecastManager(cfgFile)
     myForecastManager.runForecasts()
     print("------------------------- End (" + datetime.now().strftime("%Y-%m-%d, %H:%M:%S") + " - local)")

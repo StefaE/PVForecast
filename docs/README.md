@@ -14,7 +14,7 @@ An extensive set of forecasts relevant to PV rooftop installations is supported:
 * <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
 	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
 	+ auction prices of grid electricity
-* v2.11, v2.11.02: bug fixes
+* v2.11, v2.11.02, v2.11.03: bug fixes
 
 <span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
 * v2.11 sets default `apiCalls = 10` for [SolCast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
@@ -88,12 +88,12 @@ After downloading the script from Github, into a directory of your choosing (eg.
 ```
 
 * update the config file (`config.ini`)
-* try it out ...: `python PVForecast.py`
+* try it out ...: `python PVForecasts.py`
 * install it in `cron`, so that it runs in regular time intervals
 
 A typical `crontab` entry can look like so (assuming you have downloaded into `\home\pi\PV`):
 ```
-*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecast.py >> /home/pi/PV/data/err.txt 2>&1
+*/15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecasts.py >> /home/pi/PV/data/err.txt 2>&1
 ```
 which would run the script every 15min 
 + 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
@@ -157,7 +157,7 @@ Source | Description | Look-ahead |
 [VisualCrossing](#visualcrossing-configuration) | Weather and solar forecast from [VisualCrossing](https://www.visualcrossing.com/) | 15 days |
 [DWD](#dwd-configuration) | provided by [Deutscher Wetterdienst](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html) (primarily for Germany). Two flavours exist: | 10 days |
 _MOSMIX_L_ | single station forecast | 
-_MOSMIX_S_ | all weather stations | 
+_MOSMIX_S_ | all weather stations (will be downfiltered to single station after data download) | 
 [OpenWeatherMap](#openweathermap-configuration) | Weather forecast from [OpenWeatherMap.org](https://openweathermap.org/) with approx. 10 parameters. Cloud coverage is used for PV output power forecast | 2 days |
 [Entso-E](#entso-e-configuration) | CO2 intensity for grid power, Electricity auction prices (EU only, based on data from [Entsoe Transparency Platform](https://transparency.entsoe.eu/)) | ~1 day |
 [CO2signal](#co2signal-configuration) | actual CO2 intensity for grid power, provided by [Electricity Maps](https://www.electricitymaps.com/) | na |
@@ -172,7 +172,7 @@ Depending on the data source, various forecast algorithms are available. The con
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    # interval        =  0        # interval at which SolCast is read (during daylight only)
+    # interval        =   0       # interval at which SolCast is read (during daylight only)
     # hours           = 168       # forecast period defaults to 7 days, up to 14 days (336h)
     # apiCalls        =  10       # number of API calls supported by SolCast (new default in v2.11.00)  
 ```
@@ -215,7 +215,7 @@ The [Weather Timeline API](https://www.visualcrossing.com/resources/documentatio
 * `MOSMIX_L`: single weather station forecast, updated four times per day and approx. 115 weather parameters
 * `MOSMIX_S`: all MOSMIX weather stations, updated hourly, containing approx. 40 weather parameters
 
-Although both interfaces are supported, it is strongly suggested to use `MOSMIX_L`, since `MOSMIX_S` causes a download volume of ~1GByte/day without improving the forecast quality (despite the shorter update interval). `MOSMIX_S` can only be called from the [Forecast](#sections) section.
+Although both interfaces are supported, it is strongly suggested to use `MOSMIX_L`, since `MOSMIX_S` causes a download volume of ~1GByte/day without improving the forecast quality (despite the shorter update interval). `MOSMIX_S` can only be called from the [Forecast](#sections) section and downloaded data is immediatly downfiltered to the selected `DWDStation`.
 
 ```
 [DWD]
@@ -509,8 +509,14 @@ _SolCast_ can only store to csv files if at least one other storage model (SQlit
 
 
 ## Version History
+**v2.11.03**    2023-12-28
+Bug fixes
++ Deprecation warnings for pandas 2.x resolved ([issue #26](https://github.com/StefaE/PVForecast/issues/26))
++ Improved behavior in case of runtime issues - search log file for 'Error' and 'Warning' to get them all
++ SolCast now reports when next download is planned
+
 **v2.11.02**    2023-08-06
-Bug fix
+Bug fixes
 + proper version checking of pvlib (`pip install packaging` might be needed) 
 + moved `pvlib` code for `cloud_to_irradiance` to pvmodel.py (pvlib deprecated [pvlib.forecast](https://pvlib-python.readthedocs.io/en/stable/whatsnew.html?highlight=history#v0-10-0-june-30-2023))
 + suppressed warnings in `pvlib` related to np.exp overflow
@@ -584,7 +590,7 @@ v1.00.00    2021-02-06  initial public release
 ### Deprecations
 * **Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
 
-* `SolCastLight` is deprecated (but still available). Use `python PVForecast.py -c solcast_light_config.ini` instead
+* `SolCastLight` is deprecated (but still available). Use `python PVForecasts.py -c solcast_light_config.ini` instead
 
 ## Acknowlegements
 Thanks to all who raised issues or helped in testing!

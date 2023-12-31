@@ -75,6 +75,6 @@ class VisualCrossing(Forecast):
             return(True)
             
         except Exception as e:
-            print("getForecast_VisualCrossing: " + str(e))
+            print("Warning - getForecast_VisualCrossing: " + str(e))
             return(False)
 

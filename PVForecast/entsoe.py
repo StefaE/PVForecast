@@ -171,12 +171,12 @@ class EntsoE(Forecast):
                             df.drop(df.iloc[:, delCol], axis=1, inplace=True)                                               # ... and drop them
                             colNames = [el[0] for el in df.columns]                                                         # now we have only 'Actual Aggregated' - drop that
                             df       = df.set_axis(colNames, axis=1, copy=False)
-                            df.fillna(method='ffill', inplace=True)                                                         # some zones have missing values for 'Actual Aggregated' if 'Acutal Consumption' > 0
-                            df.fillna(method='bfill', inplace=True)                                                         # in case we have na in first row(s)
+                            df.ffill(inplace=True)                                                                          # some zones have missing values for 'Actual Aggregated' if 'Acutal Consumption' > 0
+                            df.bfill(inplace=True)                                                                          # in case we have na in first row(s)
                     if report == 'prices':
                         if zone.startswith('DE') or zone=='LU': _zone = 'DE_LU'
                         else:                                   _zone = zone
-                        _res = self.config['Entso-E'].get('resolution', '60T')                                          # these two zones support 15m time interval for prices
+                        _res = self.config['Entso-E'].get('resolution', '60T')                                              # these two zones support 15m time interval for prices
                         df       = self.client.query_day_ahead_prices(_zone, start=self._start, end=self._end, resolution = _res)
 
                     if df is not None:
@@ -217,7 +217,7 @@ class EntsoE(Forecast):
                                     df                       = None
                                     self._cols[zone][report] = None
                                     if self._verbose > 0:
-                                        print('Warning EntsoE: Incomplete renewIntraday data found for zone ' + zone)
+                                        print('Warning Entso-E: Incomplete renewIntraday data found for zone ' + zone)
 
                     if df is not None:
                         earliest.append(df.index[0])
@@ -230,12 +230,12 @@ class EntsoE(Forecast):
                 except Exception as e:
                     err = str(e)
                     if err.startswith('503') or err.startswith('404'):                                                      # we have incomplete data for at least one zone/report
-                        print('Warning EntsoE - Service unavailable ' + err[:3] + '), aborted')
+                        print('Warning Entso-E - Service unavailable ' + err[:3] + '), aborted')
                         return False
                     elif self._verbose > 0:
                         if err == "":
                             err = "No data"
-                        print('Error EntsoE ' + zone + " - " + report + ": " + err)
+                        print('Error Entso-E ' + zone + " - " + report + ": " + err)
 
             if self._entso[zone] is not None:
                 self._entso[zone] = self._entso[zone][self._entso[zone].index >= max(earliest)]
@@ -278,14 +278,14 @@ class EntsoE(Forecast):
                     url = 'https://github.com/electricitymaps/electricitymaps-contrib/raw/master/config/zones/' + yFName
                     req = requests.get(url)
                     if req.reason != 'OK':
-                        print ('Warning EntsoE: Emission data download for ' + yFName + ' failed - ' + str(req.reason))
+                        print ('Warning Entso-E: Emission data download for ' + yFName + ' failed - ' + str(req.reason))
                     else:
                         try:
                             with open(_file, 'w') as f: f.write(req.text)                                                   # write .yaml data to file, so that we have it next time
                             if self._verbose > 0:
-                                print('Message EntsoE: downloaded emission factors for zone ' + myZone)
+                                print('Message Entso-E: downloaded emission factors for zone ' + myZone)
                         except Exception as e:
-                            print("Warning EntsoE: Emission data can't be written: " + yFName + ": "+ str(e))
+                            print("Warning Entso-E: Emission data can't be written: " + yFName + ": "+ str(e))
 
                 try:
                     yFile     = open(_file, 'r')
@@ -297,12 +297,12 @@ class EntsoE(Forecast):
                         elif isinstance(yEmission[emissionType], list):                                                     # list of past averages of electricityMap data over previous years
                             emissionFactors[emissionType] = yEmission[emissionType][-1]['value']                            # use most recent one ...
                         else:                                                                                               # determine emission factor for each column; default factors as fall-back
-                            print('Warning EntsoE: Zone ' + myZone + ' - unknown emission factor structure, using default for ' + emissionType)
+                            print('Warning Entso-E: Zone ' + myZone + ' - unknown emission factor structure, using default for ' + emissionType)
                 except Exception as e:
-                    print ('Warning EntsoE: File ' + yFName + ' error - using default emission factors: ' + str(e))
+                    print ('Warning Entso-E: File ' + yFName + ' error - using default emission factors: ' + str(e))
 
             else:
-                print('Warning EntsoE: Zone ' + zone + " - electricityMap doesn't have emission factors - using defaults")
+                print('Warning Entso-E: Zone ' + zone + " - electricityMap doesn't have emission factors - using defaults")
 
             try:
                 emission_by_cols = [defaultEmissions[entso_to_emissions[(col[len('genActual')+1:])]] for col in cols['genActual']]
@@ -331,7 +331,7 @@ class EntsoE(Forecast):
                         entso.rename(columns = map, inplace=True)
                         # entso.to_csv(self.storePath + zone + "_" + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '_entso_short.csv.gz',  compression='gzip')   # -- for debugging
                     else:
-                        print('Error EntsoE: Zone ' + zone + ' - no essential columns to keep')
+                        print('Error Entso-E: Zone ' + zone + ' - no essential columns to keep')
                         entso = None
                 else:
                     for col in [c for c in entso.columns if c.startswith('calc')]:
@@ -341,10 +341,10 @@ class EntsoE(Forecast):
             except Exception as e:
                 exception_traceback = sys.exc_info()[2]
                 if entso is not None:
-                    print('Warning EntsoE (line ' + str(exception_traceback.tb_lineno) + '): Incomplete data for zone ' + zone + ': ' + str(e))
+                    print('Warning Entso-E (line ' + str(exception_traceback.tb_lineno) + '): Incomplete data for zone ' + zone + ': ' + str(e))
                     entso.to_csv(self.storePath + zone + "_" + self.IssueTime[:16].replace(' ', '_').replace(':', '-') + '_entso_report_err.csv.gz', compression='gzip')     # -- for debugging
                 else:
-                    print('Warning EntsoE (line ' + str(exception_traceback.tb_lineno) + '): No data for zone ' + zone + ': ' + str(e))
+                    print('Warning Entso-E (line ' + str(exception_traceback.tb_lineno) + '): No data for zone ' + zone + ': ' + str(e))
                 entso = None
 
             self._entso[zone] = entso

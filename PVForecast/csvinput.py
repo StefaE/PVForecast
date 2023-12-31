@@ -47,5 +47,5 @@ class CSVInput(Forecast):
             return()
 
         except Exception as e:
-            print("getForecast_CSVInput: " + str(e))
+            print("Error - getForecast_CSVInput: " + str(e))
             sys.exit(1)

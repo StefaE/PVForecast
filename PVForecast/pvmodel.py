@@ -54,8 +54,8 @@ class PVModel(Forecast):
         try:
             warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*overflow.*")
             self._pvversion = pvlib.__version__
-            if version.parse(self._pvversion) > version.parse('0.10.1'):
-                print("Warning --- pvmodel not tested with pvlib > 0.10.1")
+            if version.parse(self._pvversion) > version.parse('0.10.3'):
+                print("Warning --- pvmodel not tested with pvlib > 0.10.3")
             elif version.parse(self._pvversion) < version.parse('0.9.0'):
                 sys.tracebacklimit=0
                 raise Exception("ERROR --- require pvlib >= 0.9.0")
@@ -217,7 +217,7 @@ class PVModel(Forecast):
                 sys.tracebacklimit=0
                 raise Exception("ERROR --- incorrect irradiance model called: " + model)
         except Exception as e:
-            print("getIrradiance: " + str(e))
+            print("Error - getIrradiance: " + str(e))
             sys.exit(1)
 
         if (model != 'clearsky' and model != 'clearsky_scaling' and model != 'campbell_norman'):
