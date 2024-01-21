@@ -29,7 +29,7 @@ The project described here is developed in Python 3 and intended to run on Raspb
   
 ## PV Production Output Forecasts
 If one wants to forecast PV production output over the coming hours or days, two options exist:
-* use a solar forecast provider which directly predicts output power for a predefined installation. The most prominent and accurate is probably [SolCast](https://solcast.com/)
+* use a solar forecast provider which directly predicts output power for a predefined installation. The most prominent and accurate is probably [Solcast](https://solcast.com/)
 * use a weather forecast provider which also predicts solar radiation (GHI), or at the very least a cloud coverage estimation (at the cost of accurracy)
 	+ [Deutscher Wetterdienst](https://www.dwd.de/DE/leistungen/met_verfahren_mosmix/met_verfahren_mosmix.html)
 	+ [Visual Crossing](https://www.visualcrossing.com/)

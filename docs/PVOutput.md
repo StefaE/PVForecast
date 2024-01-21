@@ -29,9 +29,9 @@ The following shows forecast and actual data for a week in early May 2021:
 
 <img src="pictures/SolCast_8days.png">
 
-For comparison reasons, also _MOSMIX_ is shown in red. It seems obvious that _SolCast_ does a much better job in modeling the actual ups and downs of output power over the day. This is because they update their forecast every 15min ([region dependent](https://solcast.com/live-and-forecast)) and in the graph the most recent update is shown.
+For comparison reasons, also _MOSMIX_ is shown in red. It seems obvious that _Solcast_ does a much better job in modeling the actual ups and downs of output power over the day. This is because they update their forecast every 15min ([region dependent](https://solcast.com/live-and-forecast)) and in the graph the most recent update is shown.
 
-_SolCast_ is also the only source which provides a confidence interval (percentiles p10, p90) for its forecasts. We should hence expect fluctuations of actual generated power roughly within this interval.
+_Solcast_ is also the only source which provides a confidence interval (percentiles p10, p90) for its forecasts. We should hence expect fluctuations of actual generated power roughly within this interval.
 
 ### Traditional weather services
 
@@ -68,7 +68,7 @@ Hmm... what to believe? Forecasts are difficult, especially those about the futu
 
 ### Forecast horizon
 
-For the example of _SolCast_, we'll investigate a bit how forecasts evolve over different forecast horizons. Solcast is updating its forecast every 15min (although forecast intervals are always fixed at 30min for the rooftop version). The maximum forecast horizon is 14 days.
+For the example of _Solcast_, we'll investigate a bit how forecasts evolve over different forecast horizons. Solcast is updating its forecast every 15min (although forecast intervals are always fixed at 30min for the rooftop version). The maximum forecast horizon is 14 days.
 
 Hence, if we look at eg. April 29th, we get the following picture. The concept described here is identical for other forecast providers, although forecast updates are much rarer (hourly, six-hourly)
 
@@ -84,7 +84,7 @@ Comparing these forecasts with actuals, show that on this exceptional day, Solca
 
 <img src="pictures/SolCast_Apr29.png">
 
-Generally speaking, _SolCast_ and _VisualCrossing_ update their forecasts aggressively over time. _MOSMIX_ does not significantly change forecasts once issued. This is true for both versions of _MOSMIX_: the station specific three-hourly update (`MOSMIX_L`) as well as the 'all-stations' hourly update (`MOSMIX_S`).
+Generally speaking, _Solcast_ and _VisualCrossing_ update their forecasts aggressively over time. _MOSMIX_ does not significantly change forecasts once issued. This is true for both versions of _MOSMIX_: the station specific three-hourly update (`MOSMIX_L`) as well as the 'all-stations' hourly update (`MOSMIX_S`).
 
 ### Quantifying forecast quality
 

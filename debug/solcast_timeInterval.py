@@ -15,7 +15,7 @@ from math              import floor
 location     = LocationInfo('na', 'na', 'UTC', latitude=50.2, longitude=8.7)      # Frankfurt: 50.2N / 8.7E
 day          = datetime(2023, 1, 1, 0, 0, 0, tzinfo=timezone.utc)                 # day, from which to run
 
-DAYS         = 365                                                                # number of days to run (more verbose output if DAYS = 1)
+DAYS         = 365                                                              # number of days to run (more verbose output if DAYS = 1)
 INTERVAL     =   0                                                                # interval used (as in solcast.py: 0 .. -3)
 apiCalls     =  10                                                                # available API credits
 isDualArray  = True                                                               # whether we have a dual-array config
@@ -79,6 +79,12 @@ for i in range(DAYS):
                     print(n, " -- ", now_utc, "; delta_t = ", delta_t)
                 if delta_t < 1440: stepSize.append(delta_t)
                 last_issue = now_utc
+            elif DAYS == 1:
+                nextDL = now_utc + timedelta(minutes= interval - delta_t)
+                if INTERVAL != -3:
+                    if (nextDL > mySun['sunset']):
+                        nextDL = mySun['sunrise'] + timedelta(days=1)
+                print("Message - Solcast download inhibted to preserve credits; next DL planned after (UTC): " + nextDL.strftime("%Y-%m-%d, %H:%M:%S"))
     print("day: ", day.date(), " nCalls= ", n, " Intervals used: ", set(stepSize))
     allSteps = allSteps + list(set(stepSize))
     credits_used.append(n)

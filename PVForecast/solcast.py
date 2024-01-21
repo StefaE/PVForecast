@@ -60,7 +60,7 @@ class SolCast(Forecast):
         if self._site_2 is not None:                                                     # if we have two arrays, each consume a credit
             self._apiCalls = floor(self._apiCalls/2)
         if self._force:
-            print("Warning --- SolCast download forced!!! Note limits in number of downloads/day!")
+            print("Warning --- Solcast download forced!!! Note limits in number of downloads/day!")
         self.SQLTable      = 'solcast'
         self.postDict      = None                                                        # dictionary to post to solcat
 
@@ -112,15 +112,16 @@ class SolCast(Forecast):
                         retVal = True
                     else:
                         nextDL = now_utc + timedelta(minutes= interval - delta_t)
-                        if (nextDL > mySun['sunset']):
-                            nextDL = mySun['sunrise'] + timedelta(days=1)
-                        print("Message - SolCast download inhibted to preserve credits; next DL planned after (UTC): " + nextDL.strftime("%Y-%m-%d, %H:%M:%S"))
+                        if  self._interval != -3:
+                            if (nextDL > mySun['sunset']):
+                                nextDL = mySun['sunrise'] + timedelta(days=1)
+                        print("Message - Solcast download inhibted to preserve credits; next DL planned after (UTC): " + nextDL.strftime("%Y-%m-%d, %H:%M:%S"))
                 if retVal:
-                    print("Message - downloading SolCast data at (UTC): " + str(now_utc))
+                    print("Message - downloading Solcast data at (UTC): " + str(now_utc))
             else:
-                print("Warning --- getting SolCast data not supported without database storage enabled (storeDB or storeInflux)")
+                print("Warning --- getting Solcast data not supported without database storage enabled (storeDB or storeInflux)")
         else:
-            print("Message - SolCast download inhibted between sunset and sunrise (see 'interval' parameter)")
+            print("Message - Solcast download inhibted between sunset and sunrise (see 'interval' parameter)")
         return(retVal)
 
     def getSolCast(self):

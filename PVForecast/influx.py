@@ -184,7 +184,7 @@ class InfluxRepo:
 
     # ----------------------------------------------------------------------------------- outdated code
     def getPostData(self, solcast, power_field):
-        """get data to be posted to SolCast - deprecated as SolCast deprecated data upload"""
+        """get data to be posted to Solcast - deprecated as Solcast deprecated data upload"""
         try:
             if self._influx_V2:
                 sys.tracebacklimit=0

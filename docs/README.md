@@ -10,15 +10,15 @@ A high level introduction to the project is given [here](https://stefae.github.i
  
 ## Introduction
 An extensive set of forecasts relevant to PV rooftop installations is supported:
-* production forecasts based on a number of providers (many users may focus on [SolCast](https://solcast.com/free-rooftop-solar-forecasting) for easy installation and excellent forecast quality)
+* production forecasts based on a number of providers (many users may focus on [Solcast](https://solcast.com/free-rooftop-solar-forecasting) for easy installation and excellent forecast quality)
 * <span style="color:#00B0F0"><b>New in v2.10:</b></span> (for EU only)
 	+ forecast of CO2 intensity of grid electricity consumed ([CO2signal](#co2signal-configuration) shows actual data for many areas of the world)
 	+ auction prices of grid electricity
 * v2.11, v2.11.02, v2.11.03: bug fixes
 
 <span style="color:red"><b>Upgrade Notice:</b></span> incompatible changes - see [Version History](#version-history) for details
-* v2.11 sets default `apiCalls = 10` for [SolCast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
-* v2.10 requires pvlib v0.9.0 or higher (for **full version only**); small changes to `config.ini` keys and defaults, `SolCastLight` is deprecated (but still works)
+* v2.11 sets default `apiCalls = 10` for [Solcast](#solcast-configuration) - legacy users with more credits need set `apiCalls` explicitly.
+* v2.10 requires pvlib v0.9.0 or higher (for **full version only**); small changes to `config.ini` keys and defaults, `SolcastLight` is deprecated (but still works)
 * v2.00 contains some incompatible changes (for the **full version** only) - . For users of the **light version**, there is no incentive to upgrade from v1.02/v1.03.
 
 -------------
@@ -31,7 +31,7 @@ An extensive set of forecasts relevant to PV rooftop installations is supported:
     - [Default Section](#default-section)
   - [Configuring Data Sources](#configuring-data-sources)
     - [Forecast Sources](#forecast-sources)
-    - [SolCast Configuration](#solcast-configuration)
+    - [Solcast Configuration](#solcast-configuration)
     - [VisualCrossing Configuration](#visualcrossing-configuration)
     - [DWD configuration](#dwd-configuration)
     - [OpenWeatherMap Configuration](#openweathermap-configuration)
@@ -67,7 +67,7 @@ Required packages are described in [requirements.txt](https://github.com/StefaE/
 * the first group of packages is required mandatorily
 * the `Influx` related packages are required if [Data Storage](#configuring-data-storage) to `Influx` (v1.8 or v2.x) is desired.
 * the last group of packages are the most difficult to install, but only required if corresponding functionality is needed:
-  + `pvlib` models [PV output power](#configuring-pv-output-power-forecast-modelling) and used for  [Forecast Sources](#forecast-sources) providing radiation data (`VisualCrossing`, `MOSMIX`, `OWM`) but **not** for `SolCast`
+  + `pvlib` models [PV output power](#configuring-pv-output-power-forecast-modelling) and used for  [Forecast Sources](#forecast-sources) providing radiation data (`VisualCrossing`, `MOSMIX`, `OWM`) but **not** for `Solcast`
   + `entso-py` is required only for [CO2 intensity forecast](#entso-e-configuration) (and easy to install)
   
 [Influx](https://www.influxdata.com/products/influxdb/) must be installed separately. `SQLite` is supported natively by Python. However, an [SQLite browser](https://sqlitebrowser.org/) maybe useful.
@@ -96,7 +96,7 @@ A typical `crontab` entry can look like so (assuming you have downloaded into `\
 */15 * * * * cd /home/pi/PV && /usr/bin/python3 PVForecasts.py >> /home/pi/PV/data/err.txt 2>&1
 ```
 which would run the script every 15min 
-+ 15min interval is recommended due to the API call management provided for [SolCast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
++ 15min interval is recommended due to the API call management provided for [Solcast](#solcast-configuration). For other data sources, the script handles larger calling intervals internally.
 + when using `solcast_light_config.ini` it is recommended to rename this file to `config.ini`. Then we don't need the `-c` argument
 
 A great explanation of `cron` is from [crontab guru](https://crontab.guru/examples.html). Crontab entries are made with `crontab -e` and checked with `crontab -l`.
@@ -117,7 +117,7 @@ Section | Description |
 --------|-------------|
 `[Default]`	| If a key-value pair is not found in a specific section, the corresponding value in the default section is used. |
 `[Forecasts]` | Forecasts to be run. If this section is missing, all forecasts for which a specific section exists is run |
-Forecast configs | Each forecast source has its own section: _SolCast, VisualCrossing, DWD, OpenWeatherMap, Entso-E, CO2signal, FileInput_ |
+Forecast configs | Each forecast source has its own section: _Solcast, VisualCrossing, DWD, OpenWeatherMap, Entso-E, CO2signal, FileInput_ |
 `[PVSystem]` | describes the PV system (for forecast sources which require modelling: _VisualCrossing, DVD, OpenWeatherMap_. For [split-array configurations](#split-array-system-configuration), additional sections can be created |
 `[DBRepo]` | configuration of [_SQLite_ storage](#sqlite-storage)
 `Influx]`  | configuration of [_Influx_ storage](#influx-storage)
@@ -166,20 +166,24 @@ _VisualCrossing, DWD_ and _OpenWeatherMap_ need modeling as described [below](#c
 
 Depending on the data source, various forecast algorithms are available. The configuration happens in the respective sections described below.
 
-### SolCast Configuration
+### Solcast Configuration
 ```
 [SolCast]
     resource_id       = <resource_id_from_solcast.com>
     # resource_id_2   = <second_resource_id_from_solcast.com>
     api_key           = <api_id_from_solcast.com>
-    # interval        =   0       # interval at which SolCast is read (during daylight only)
+    # interval        =   0       # interval at which Solcast is read (during daylight only)
     # hours           = 168       # forecast period defaults to 7 days, up to 14 days (336h)
-    # apiCalls        =  10       # number of API calls supported by SolCast (new default in v2.11.00)  
+    # apiCalls        =  10       # number of API calls supported by Solcast (new default in v2.11.00)  
 ```
 
-[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residential rooftop PV installation of up to 1MWp and allows for up to 10 API calls/day (legacy users may benefit from more credits and can set their entitlement with `apiCalls`). The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key. _SolCast_ also supports [dual array systems](https://articles.solcast.com.au/en/articles/2887438-how-do-i-create-a-multiple-azimuth-rooftop-solar-site) (eg., east/west) through a second `resource_id_2`.
+[Solcast](https://solcast.com/free-rooftop-solar-forecasting) allows for the free registration of a residential rooftop PV installation of up to 1MWp and allows for up to 10 API calls/day (legacy users may benefit from more credits and can set their entitlement with `apiCalls`). Note that _split array_ configurations require one credit per array - hence essentially reducing the calls to 5/day.
 
-_SolCast_ directly provides a PV forecasts (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed. Forecasts are [updated every 15min](https://solcast.com/live-and-forecast) (for Eurasia), but it is recommended to call _SolCast_ no more than every 30min.
+_Solcast_ is considering to provide more calls as a paid service to hobbyists - [this questionaire](https://docs.google.com/forms/d/e/1FAIpQLSefZqRZ9z2f9pjl4Tc3zpscPVSBzhsPbErdyAwzui2xXqRz4A/viewform?usp=sf_link) helps them establish the market acceptance - hence, if you are interested, please fill in the form.
+
+The registration process provides a 12-digit _resource_id_ (`xxxx-xxxx-xxxx-xxxx`) and a 32 character API key. _Solcast_ also supports [dual array systems](https://articles.solcast.com.au/en/articles/2887438-how-do-i-create-a-multiple-azimuth-rooftop-solar-site) (eg., east/west) through a second `resource_id_2`.
+
+_Solcast_ directly provides a PV forecasts (in kW) for 30min intervals, with 10% and 90% confidence level. Hence, no further modelling is needed. Forecasts are [updated every 15min](https://solcast.com/live-and-forecast) (for Eurasia), but it is recommended to call _Solcast_ no more than every 30min.
 
 To stay within the limits of `apiCalls` per day, the script calls the API only between sunrise and sunset, except in the `24h` configuration below. It can further manage the calling interval to the API automatically or explicitly through the value assigned to `interval`:
 
@@ -189,11 +193,11 @@ value | meaning
 early | same as `0`, but all interval extensions are done before sunset only. Hence, this provides most accurate forecasts in the morning (this is not useful for `apiCalls < 25`)
 late  | same as `0`, but all interval extensions are done after sunrise only. Hence, this provides most accurate forecasts in the afternoon (this is not useful for `apiCalls < 25`)
 24h   | downloads over the full day, but intervals are longer than in the previous configuration
-number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minutes. It is the users responsability to stay within the limits of `apiCalls` supported by _SolCast_
+number | a positive number (eg. 15, 30, 60, ...) ensures that the API is not called more frequently than the stated number of minutes. It is the users responsability to stay within the limits of `apiCalls` supported by _Solcast_
 
 There is obviously an interaction between the `interval` settings and the `crontab` entry used to run the script (see [above](#running-the-script)). It is suggested to configure `crontab` to run the script every 30min (for `apiCalls >=25`, every 15min is possible). The interested user can use the script `./debug/solcast_timeInterval.py` to learn how download intervals are calculated - self-study is required).
 
-Parameters `Latitude` and `Longitude` are only used to calculate daylight time. Defaults are for Frankfurt, Germany. (The _SolCast_ service has it's own location information, associated with the `api_key`.)
+Parameters `Latitude` and `Longitude` are only used to calculate daylight time. Defaults are for Frankfurt, Germany. (The _Solcast_ service has it's own location information, associated with the `api_key`.)
 
 `hours` defines the forecast period and defaults to 168h, but can be extended up to 14 days (336h)
 
@@ -302,7 +306,7 @@ This forecast source is for mainly for debugging purposes and allows to read `.k
    <img style="margin-left:0" src="pictures/pvlib_powered_logo_horiz.png">
 </a>
 
-Data from all PV output power related data sources (except [SolCast](#solcast-configuration)) do not directly contain PV output power. This needs be modelled using functionality provided by [pvlib](https://pvlib-python.readthedocs.io/en/stable/). 
+Data from all PV output power related data sources (except [Solcast](#solcast-configuration)) do not directly contain PV output power. This needs be modelled using functionality provided by [pvlib](https://pvlib-python.readthedocs.io/en/stable/). 
 
 Essentially, the modelling consists of a two-step approach:
 1. convert weather data to irradiation data (_GHI, DNI, DHI_). Multiple conversion strategies are available and controlled with the `Irradiance` parameter in the config section for `[VisualCrossing]`, `[DWD]` and `[OpenWeatherMap]` respectively.
@@ -319,7 +323,7 @@ Model | Input parameter | Applicable to | Comment
 [erbs](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.erbs.html) | `GHI` | MOSMIX (*), VisualCrossing | 
 [campbell_norman](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.irradiance.campbell_norman.html) | `clouds` | OWM, MOSMIX | 
 [clearsky_scaling](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.forecast.ForecastModel.cloud_cover_to_irradiance_clearsky_scaling.html) | `clouds` | OWM, MOSMIX | default if GHI not available, 
-[clearsky](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.location.Location.get_clearsky.html) | NA | all (except SolCast), output agnostic to weather forecast | clear sky estimation of PV output power; uses `simplified_solis`
+[clearsky](https://pvlib-python.readthedocs.io/en/stable/reference/generated/pvlib.location.Location.get_clearsky.html) | NA | all (except Solcast), output agnostic to weather forecast | clear sky estimation of PV output power; uses `simplified_solis`
 all | NA | NA | calculate all applicable models for provided weather data
 
 (*) not all MOSMIX stations provide GHI data
@@ -504,16 +508,21 @@ If the database is configured to support multiple retention policies, one for th
 ### .csv File Storage
 `storeCSV = 1` store output in .csv files at `storePath`. This is mainly for debugging. 
 
-_SolCast_ can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
+_Solcast_ can only store to csv files if at least one other storage model (SQlite, Influx) is enabled.
 
 
 
 ## Version History
+**v2.11.04**    2024-01-21
++ Bug fix: Solcast _next download_ message corrected for `interval = 24h`
++ changes spelling in documentation from _SolCast_ to _Solcast_ (**Note**: `config.ini` section remains `[SolCast]`)
++ added [link](#solcast-configuration) to questionaire by _Solcast_ on paied service
+
 **v2.11.03**    2023-12-28
 Bug fixes
 + Deprecation warnings for pandas 2.x resolved ([issue #26](https://github.com/StefaE/PVForecast/issues/26))
 + Improved behavior in case of runtime issues - search log file for 'Error' and 'Warning' to get them all
-+ SolCast now reports when next download is planned
++ Solcast now reports when next download is planned
 
 **v2.11.02**    2023-08-06
 Bug fixes
@@ -524,19 +533,19 @@ Bug fixes
 
 **v2.11.00**    2023-04-21
 Bug fixes
-+ SolCast interval calculation fixed for low number of `apiCalls`
++ Solcast interval calculation fixed for low number of `apiCalls`
 + avoid exit, if some forcast providers cause errors (eg. _too many API calls_) - allow continuation with next forecast provider
 + other bug fixes
 
 _Compatibility notes on v2.11.00_
 
-_SolCast_ has changed number of allowed `apiCalls` per day to 10, but it appears that legacy users still can use their previous entitlements. The default value for `apiCalls` has changed, so that legacy users now need explicitly set their entitlement value.
+_Solcast_ has changed number of allowed `apiCalls` per day to 10, but it appears that legacy users still can use their previous entitlements. The default value for `apiCalls` has changed, so that legacy users now need explicitly set their entitlement value.
 
 **v2.10.00**    2023-02-28
 
-If you plan to continue using only _SolCastLight_, there is no reason to update - but you miss out on the new capabilities on CO2 intensity forecast
+If you plan to continue using only _SolcastLight_, there is no reason to update - but you miss out on the new capabilities on CO2 intensity forecast
 + [CO2 intensity forecast](CO2Intensity) added, see [Entso-E](#entso-e-configuration) and [CO2signal](#co2signal-configuration)
-+ _SolCast_ interval can now be configured to `24h` - see [SolCast Configuration](#solcast-configuration). This solves [issue #15](https://github.com/StefaE/PVForecast/issues/15)
++ _Solcast_ interval can now be configured to `24h` - see [Solcast Configuration](#solcast-configuration). This solves [issue #15](https://github.com/StefaE/PVForecast/issues/15)
 + Installation simplified - if some libraries are not installed, _PVForecast_ behaves gracefully and only disables functionality which cannot be maintained. See [Installation](#installation)
 + it is no longer required to create Influx databases manually upfront
 + documentation (including [pages](https://stefae.github.io/PVForecast/)) reworked
@@ -548,7 +557,7 @@ _Compatibility notes on v2.10.00_
 + default model changed from `CEC` to `PVWatts`, see [Convert Irradiation Data to PV Output Power](#convert-irradiation-data-to-pv-output-power)
 
 **v2.01.00**    2022-12-03
-+ solves [issue #14](https://github.com/StefaE/PVForecast/issues/14): [SolCast](#solcast-configuration) defaults to 48h, but accepts an `hours` parameter.
++ solves [issue #14](https://github.com/StefaE/PVForecast/issues/14): [Solcast](#solcast-configuration) defaults to 48h, but accepts an `hours` parameter.
 + Upgrade notice: for this to work, `pysolcast` version needs be v1.0.2 or higher
 
 **v2.00.00**    2022-07-24
@@ -578,9 +587,9 @@ As a consequence, if the [SQLite Storage](#sqlite-storage) model is used, the pr
 + small bug fixes
 
 **v1.01.00**    2021-03-28
-+ SolCast:
-  - [SolCast](#solcast-configuration) default `interval` management to make optimal use of permitted 50 API calls/day
-  - [split array support](#split-array-system-configuration) for MOSMIX and OWM (SolCast supports two arrays only)
++ Solcast:
+  - [Solcast](#solcast-configuration) default `interval` management to make optimal use of permitted 50 API calls/day
+  - [split array support](#split-array-system-configuration) for MOSMIX and OWM (Solcast supports two arrays only)
 - [Influx v2.x](#influx-v2x-storage) support
 - [storeCSV](#csv-file-storage) now enabled for all data sources
 - various bug fixes, documentation improvement
@@ -588,9 +597,9 @@ As a consequence, if the [SQLite Storage](#sqlite-storage) model is used, the pr
 v1.00.00    2021-02-06  initial public release
 
 ### Deprecations
-* **Deprecated by SolCast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
+* **Deprecated by Solcast**: Solcast previously allowed to post PV performance data to [tune forecast](https://articles.solcast.com.au/en/articles/2366323-pv-tuning-technology) to eg. local shadowing conditions, etc. 
 
-* `SolCastLight` is deprecated (but still available). Use `python PVForecasts.py -c solcast_light_config.ini` instead
+* `SolcastLight` is deprecated (but still available). Use `python PVForecasts.py -c solcast_light_config.ini` instead
 
 ## Acknowlegements
 Thanks to all who raised issues or helped in testing!
