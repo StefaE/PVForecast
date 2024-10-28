@@ -206,7 +206,7 @@ class DWDForecast(Forecast):
                     valStr = valStrArray[i].text.replace('-', 'nan')
                     valArr = valStr.split()
                     valArr = np.array(valArr)
-                    valArr = np.asfarray(valArr, float)
+                    valArr = np.asarray(valArr, dtype=float)
                     weatherData.update({ param : valArr })
                 self.DataTable            = pd.DataFrame(weatherData, index=pd.DatetimeIndex(PeriodEnd))
                 self.DataTable.index.name = 'PeriodEnd'                                  # Time is in UTC
