@@ -28,4 +28,5 @@ scipy>=1.4.0
 
 # .. and finally pvlib
 packaging
+# issues have been seen with installing pvlib, see here: https://github.com/StefaE/PVForecast/issues/33#issuecomment-2445923937
 pvlib>=0.10.0
