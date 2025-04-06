@@ -46,6 +46,8 @@ class InfluxRepo:
         self._host         = self.config['Influx'].get('host', 'localhost')
         self._posthost     = self.config['Influx'].get('post_host', self._host)
         self._port         = self.config['Influx'].getint('port', 8086)
+        self._ssl          = self.config['Influx'].getboolean('ssl', False)
+        self._verify_ssl   = self.config['Influx'].getboolean('verify_ssl', False)
         self._database     = self.config['Influx'].get('database', None)
         self._postdatabase = self.config['Influx'].get('post_database', self._database)
         self._retention    = self.config['Influx'].get('retention', None)                # retention policy (only for Influx v1.x)
@@ -88,7 +90,7 @@ class InfluxRepo:
             df_log    = pd.DataFrame(data={'IssueTime': issueTime, 'Table': [data.SQLTable]}, index=[now_utc])
 
             if not self._influx_V2:
-                client    = DataFrameClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
+                client    = DataFrameClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password, ssl=self._ssl, verify_ssl=self._verify_ssl)
                 self._verifyDB(client)
                 client.write_points(df, data.SQLTable)
                 client.write_points(df_log, 'forecast_log', tag_columns=['Table'])
@@ -107,7 +109,7 @@ class InfluxRepo:
         """
         IssueTime = None
         if not self._influx_V2:
-            client = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
+            client = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password, ssl=self._ssl, verify_ssl=self._verify_ssl)
             self._verifyDB(client)
             select = client.query("""SELECT Last("IssueTime") AS "IssueTime" FROM "forecast_log" WHERE "Table"='""" + table + """'""")
             for row in select.get_points():
@@ -143,7 +145,7 @@ class InfluxRepo:
         try:
             startTime = start.strftime('%Y-%m-%dT%H:%M:%SZ')
             if not self._influx_V2:
-                client    = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password)
+                client    = InfluxDBClient(host=self._host, port=self._port, database=self._database, username=self._username, password=self._password, ssl=self._ssl, verify_ssl=self._verify_ssl)
                 self._verifyDB(client)
                 sql       = 'SELECT * FROM "' + table + '" WHERE time >= ' + "'" + startTime + "'"
                 select    = client.query(sql)
@@ -200,7 +202,7 @@ class InfluxRepo:
 
             meas, field = self.config['Influx'].get(power_field).split('.')
 
-            client      = InfluxDBClient(host=self._posthost, port=self._port, database=self._postdatabase, username=self._username, password=self._password)
+            client      = InfluxDBClient(host=self._posthost, port=self._port, database=self._postdatabase, username=self._username, password=self._password, ssl=self._ssl, verify_ssl=self._verify_ssl)
             sql         = 'SELECT mean("' + field +'") AS "total_power" FROM "' + meas + '" WHERE time >= ' + "'" + startTime + "' AND time < '" + endTime + "' GROUP BY time(5m)"
             select      = client.query(sql)
             postDict    = []
