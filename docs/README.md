@@ -493,6 +493,8 @@ Note that in Influx 2.x token based authentication is mandatory. Tokens can be [
 [Influx]
     host              = <your_hostname>         # default: localhost
     # port            = 8086
+    ssl               = 0
+    verify_ssl        = 0
     database          = <your_influx_db_name>
     # username        = root
     # password        = root
